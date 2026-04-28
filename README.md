@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Medora
 
-## Getting Started
+A multi-tenant clinic management platform — one app, many clinics.
 
-First, run the development server:
+## Layout
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+medora/
+├─ frontend/   # Next.js 16 app (dashboard, calendar, billing, public booking)
+├─ backend/    # Express 5 + Prisma + Neon (PostgreSQL)
+├─ AGENTS.md   # Workspace-wide agent rules
+└─ README.md   # (this file)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Each package is independent — install and run them in their own folders.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quick start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open two terminals.
 
-## Learn More
+**Terminal 1 — API**
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd backend
+cp .env.example .env
+# Set DATABASE_URL to your Neon connection string (postgresql://…neon.tech…)
+npm install
+npm run db:push        # sync Prisma schema to Neon (first time)
+npm run dev            # http://localhost:4100
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Check `GET http://localhost:4100/health` (liveness) and `GET http://localhost:4100/api/health` (includes DB ping).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Terminal 2 — Web**
 
-## Deploy on Vercel
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:3000
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The frontend may use local demo data until you connect it to this API.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [`backend/README.md`](backend/README.md) for folder layout and scripts.
+
+## Per-package docs
+
+- [`frontend/README.md`](frontend/README.md) — Next.js setup
+- [`backend/README.md`](backend/README.md) — Express, Prisma, Neon, folder layout

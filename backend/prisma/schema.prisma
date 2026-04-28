@@ -1,0 +1,28 @@
+// Medora — Neon (PostgreSQL)
+// https://neon.tech/docs/connect/connect-from-any-app
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  Owner
+  Doctor
+  Receptionist
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique @db.Text
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(Owner)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
