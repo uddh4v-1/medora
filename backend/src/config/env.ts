@@ -13,12 +13,16 @@ const envSchema = z.object({
     .min(16, "JWT_SECRET must be at least 16 characters"),
   /** Default JWT lifetime (e.g. register; fallbacks in auth-cookie) */
   JWT_EXPIRES_IN: z.string().default("7d"),
-  /** Login when “Remember me” is off — shorter session */
+  /** Access token TTL — kept short when refresh tokens are in use */
+  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+  /** Refresh token TTL when "Remember me" is off */
   JWT_SESSION_EXPIRES_IN: z.string().default("1d"),
-  /** Login when “Remember me” is on */
+  /** Refresh token TTL when "Remember me" is on */
   JWT_REMEMBER_ME_EXPIRES_IN: z.string().default("30d"),
-  /** HttpOnly cookie name storing the access JWT (`server-side session`) */
+  /** HttpOnly cookie name storing the access JWT */
   AUTH_COOKIE_NAME: z.string().default("medora_session"),
+  /** HttpOnly cookie name storing the refresh token */
+  REFRESH_COOKIE_NAME: z.string().default("medora_refresh"),
 
   /** Public web app URL (used in password-reset emails: `${APP_ORIGIN}/reset-password?token=`) */
   APP_ORIGIN: z
@@ -27,6 +31,8 @@ const envSchema = z.object({
     .default("http://localhost:3000"),
   /** Forgot-password link TTL */
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().positive().max(1440).default(60),
+  /** Email-verification link TTL */
+  EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().positive().max(1440).default(60),
 
   /** `true`: use Gmail (`service: gmail` in nodemailer). Requires SMTP_USER (= Google account), SMTP_PASSWORD (= [App Password](https://support.google.com/accounts/answer/185833)), MAIL_FROM. SMTP_HOST is ignored when set. */
   USE_GMAIL_SMTP: z

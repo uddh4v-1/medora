@@ -6,11 +6,9 @@ import { toast } from "sonner";
 
 import { DataListSkeleton } from "@/components/dashboard/data-list-skeleton";
 import { Input } from "@/components/ui/input";
-import {
-  nextPrescriptionNumber,
-  type Prescription,
-} from "@/lib/dashboard-content";
+import { type Prescription } from "@/lib/dashboard-content";
 import { useClinicStore, useHydrated } from "@/stores/clinic-store";
+import { createPrescription } from "@/services/prescriptions.service";
 
 import { DashboardPageHeader } from "../_components/page-header";
 import {
@@ -19,13 +17,6 @@ import {
 } from "./_components/new-prescription-dialog";
 import { PrescriptionsTable } from "./_components/prescriptions-table";
 
-function todayIso() {
-  const d = new Date();
-  return `${d.getFullYear()}-${(d.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-}
-
 export default function PrescriptionsPage() {
   const hydrated = useHydrated();
   const prescriptions = useClinicStore((s) => s.prescriptions);
@@ -33,19 +24,40 @@ export default function PrescriptionsPage() {
   const addPrescription = useClinicStore((s) => s.addPrescription);
   const [query, setQuery] = useState("");
 
-  function handleCreate(input: NewPrescriptionInput) {
-    const newRx: Prescription = {
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `rx-${Date.now()}`,
-      number: nextPrescriptionNumber(prescriptions),
-      patient: input.patientName,
-      doctor: input.doctorName,
-      date: todayIso(),
+  async function handleCreate(input: NewPrescriptionInput) {
+    const res = await createPrescription({
+      patientId: input.patientId,
+      doctorId: input.doctorId || null,
       diagnosis: input.diagnosis,
-      medications: input.medications,
-      notes: input.notes,
+      notes: input.notes || undefined,
+      items: input.medications.map((m) => ({
+        name: m.name,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        duration: m.duration,
+        notes: m.notes || undefined,
+      })),
+    });
+    if (!res.ok) {
+      toast.error("Failed to save prescription");
+      return;
+    }
+    const newRx: Prescription = {
+      id: res.data.id,
+      number: res.data.number,
+      patient: res.data.patientName,
+      doctor: res.data.doctorName ?? "Unassigned",
+      date: res.data.date,
+      diagnosis: res.data.diagnosis,
+      notes: res.data.notes ?? "",
+      medications: res.data.items.map((i) => ({
+        id: i.id,
+        name: i.name,
+        dosage: i.dosage,
+        frequency: i.frequency,
+        duration: i.duration,
+        notes: i.notes ?? "",
+      })),
     };
     addPrescription(newRx);
     toast.success("Prescription saved", { description: newRx.number });

@@ -7,6 +7,8 @@ import type {
   Appointment,
   Invoice,
   Patient,
+  Prescription,
+  TeamMember,
   Visit,
 } from "@/lib/dashboard-content";
 import {
@@ -15,15 +17,14 @@ import {
   getDashboardPatients,
   getDashboardQueue,
 } from "@/services/dashboard.service";
+import { getPrescriptions } from "@/services/prescriptions.service";
+import { getTeamMembers } from "@/services/team.service";
 import { useClinicStore } from "@/stores/clinic-store";
 import { getMe } from "@/services/auth.service";
+import { DashboardSkeleton } from "./dashboard-skeleton";
 
 type Props = { children: React.ReactNode };
 
-/**
- * Validates **`GET /api/auth/me`** (JWT cookie) before showing the dashboard.
- * On success, refreshes **`signIn`** from the server user; on **401**, clears session and sends to **`/login`**.
- */
 export function DashboardSessionSync({ children }: Props) {
   const router = useRouter();
   const signIn = useClinicStore((s) => s.signIn);
@@ -42,15 +43,17 @@ export function DashboardSessionSync({ children }: Props) {
       return null;
     }
 
-    function toVisits(rows: {
-      id: string;
-      patientName: string;
-      doctorName: string | null;
-      title: string;
-      reason: string;
-      status: "waiting" | "in-progress" | "completed";
-      startedAt: string;
-    }[]): Visit[] {
+    function toVisits(
+      rows: {
+        id: string;
+        patientName: string;
+        doctorName: string | null;
+        title: string;
+        reason: string;
+        status: "waiting" | "in-progress" | "completed";
+        startedAt: string;
+      }[],
+    ): Visit[] {
       return rows.map((v) => ({
         id: v.id,
         patient: v.patientName,
@@ -62,21 +65,23 @@ export function DashboardSessionSync({ children }: Props) {
       }));
     }
 
-    function toAppointments(rows: {
-      id: string;
-      patientName: string;
-      doctorName: string | null;
-      startTime: string;
-      endTime: string;
-      reason: string;
-      status:
-        | "scheduled"
-        | "confirmed"
-        | "in-progress"
-        | "completed"
-        | "cancelled"
-        | "no-show";
-    }[]): Appointment[] {
+    function toAppointments(
+      rows: {
+        id: string;
+        patientName: string;
+        doctorName: string | null;
+        startTime: string;
+        endTime: string;
+        reason: string;
+        status:
+          | "scheduled"
+          | "confirmed"
+          | "in-progress"
+          | "completed"
+          | "cancelled"
+          | "no-show";
+      }[],
+    ): Appointment[] {
       return rows.map((a) => ({
         id: a.id,
         patient: a.patientName,
@@ -88,17 +93,19 @@ export function DashboardSessionSync({ children }: Props) {
       }));
     }
 
-    function toInvoices(rows: {
-      id: string;
-      number: string;
-      patientName: string;
-      total: number;
-      status: "paid" | "unpaid";
-      issuedAt: string;
-      discount: number | null;
-      gst: number | null;
-      doctorName: string | null;
-    }[]): Invoice[] {
+    function toInvoices(
+      rows: {
+        id: string;
+        number: string;
+        patientName: string;
+        total: number;
+        status: "paid" | "unpaid";
+        issuedAt: string;
+        discount: number | null;
+        gst: number | null;
+        doctorName: string | null;
+      }[],
+    ): Invoice[] {
       return rows.map((inv) => ({
         id: inv.id,
         number: inv.number,
@@ -109,6 +116,64 @@ export function DashboardSessionSync({ children }: Props) {
         discount: inv.discount ?? undefined,
         gst: inv.gst ?? undefined,
         doctor: inv.doctorName ?? undefined,
+      }));
+    }
+
+    function toPrescriptions(
+      rows: {
+        id: string;
+        number: string;
+        date: string;
+        patientName: string;
+        doctorName: string | null;
+        diagnosis: string;
+        notes: string | null;
+        items: {
+          id: string;
+          name: string;
+          dosage: string;
+          frequency: string;
+          duration: string;
+          notes: string | null;
+        }[];
+      }[],
+    ): Prescription[] {
+      return rows.map((rx) => ({
+        id: rx.id,
+        number: rx.number,
+        patient: rx.patientName,
+        doctor: rx.doctorName ?? "Unassigned",
+        date: rx.date,
+        diagnosis: rx.diagnosis,
+        notes: rx.notes ?? "",
+        medications: rx.items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          dosage: i.dosage,
+          frequency: i.frequency,
+          duration: i.duration,
+          notes: i.notes ?? "",
+        })),
+      }));
+    }
+
+    function toTeamMembers(
+      rows: {
+        id: string;
+        name: string;
+        email: string;
+        role: "Owner" | "Doctor" | "Receptionist";
+        specialty: string | null;
+        fee: number | null;
+      }[],
+    ): TeamMember[] {
+      return rows.map((m) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        role: m.role,
+        specialty: m.specialty,
+        fee: m.fee,
       }));
     }
 
@@ -123,6 +188,12 @@ export function DashboardSessionSync({ children }: Props) {
           data.user.role &&
           typeof data.user.id === "string"
         ) {
+          // SuperAdmin has no clinic — send them to their own dashboard
+          if (data.user.role === "SuperAdmin") {
+            router.replace("/superadmin");
+            return;
+          }
+
           signIn({
             email: data.user.email,
             role: data.user.role,
@@ -132,12 +203,14 @@ export function DashboardSessionSync({ children }: Props) {
             clinic: data.user.clinic ?? null,
           });
 
-          const [overviewRes, patientsRes, queueRes, invoicesRes] =
+          const [overviewRes, patientsRes, queueRes, invoicesRes, rxRes, teamRes] =
             await Promise.all([
               getDashboardOverview(),
               getDashboardPatients({ page: 1, limit: 100 }),
               getDashboardQueue(),
               getDashboardInvoices({ page: 1, limit: 100 }),
+              getPrescriptions({ page: 1, limit: 100 }),
+              getTeamMembers(),
             ]);
 
           if (!cancelled) {
@@ -153,14 +226,36 @@ export function DashboardSessionSync({ children }: Props) {
               : [];
 
             const visits: Visit[] = queueRes.ok ? toVisits(queueRes.data.items) : [];
+
             const appointments: Appointment[] = overviewRes.ok
               ? toAppointments(overviewRes.data.todaySchedule)
               : [];
+
             const invoices: Invoice[] = invoicesRes.ok
               ? toInvoices(invoicesRes.data.items)
               : [];
 
-            hydrateDashboardData({ patients, visits, appointments, invoices });
+            const prescriptions: Prescription[] = rxRes.ok
+              ? toPrescriptions(rxRes.data.items)
+              : [];
+
+            const teamMembers: TeamMember[] = teamRes.ok
+              ? toTeamMembers(teamRes.data.items)
+              : [];
+
+            const overviewStats = overviewRes.ok
+              ? overviewRes.data.stats
+              : { appointmentsToday: 0, waitingCount: 0, patientsTotal: 0, unpaidCount: 0 };
+
+            hydrateDashboardData({
+              patients,
+              visits,
+              appointments,
+              invoices,
+              prescriptions,
+              teamMembers,
+              overviewStats,
+            });
           }
 
           setReady(true);
@@ -186,13 +281,7 @@ export function DashboardSessionSync({ children }: Props) {
   }, [hydrateDashboardData, router, signIn, signOut]);
 
   if (!ready) {
-    return (
-      <div className="flex min-h-screen flex-1 flex-col items-center justify-center gap-2 bg-background text-sm text-muted-foreground">
-        <span aria-busy aria-live="polite">
-          Signing you in…
-        </span>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return <>{children}</>;

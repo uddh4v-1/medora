@@ -6,14 +6,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
   Owner
   Doctor
   Receptionist
+  SuperAdmin
 }
 
 model Clinic {
@@ -49,7 +51,12 @@ model User {
   prescriptions Prescription[]
   invoices      Invoice[]
 
-  passwordResetTokens PasswordResetToken[]
+  emailVerified       Boolean  @default(false) @map("email_verified")
+
+  passwordResetTokens      PasswordResetToken[]
+  emailVerificationTokens  EmailVerificationToken[]
+  refreshTokens            RefreshToken[]
+  auditLogs                AuditLog[]
 
   @@index([clinicId])
   @@map("users")
@@ -66,6 +73,33 @@ model PasswordResetToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique @map("token_hash") @db.VarChar(128)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rememberMe Boolean  @default(false) @map("remember_me")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique @map("token_hash") @db.VarChar(128)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 
 enum VisitStatus {
@@ -91,6 +125,8 @@ model Patient {
   clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   name          String
   phone         String
+  email         String?
+  address       String?   @db.Text
   age           Int?
   gender        String?
   nextVisitDate DateTime? @map("next_visit_date")
@@ -202,4 +238,23 @@ model InvoiceItem {
   amount    Int
   @@index([invoiceId])
   @@map("invoice_items")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clinicId  String?  @map("clinic_id")
+  action    String   @db.VarChar(64)
+  resource  String   @db.Text
+  metadata  Json?
+  ip        String?  @db.VarChar(64)
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([clinicId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

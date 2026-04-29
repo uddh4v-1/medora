@@ -21,3 +21,15 @@ export function authCookieOptions(env: Env, jwtExpiresIn?: string): CookieOption
     maxAge: jwtExpiryMsFromExpiresIn(ttl),
   };
 }
+
+export function refreshCookieOptions(env: Env, rememberMe: boolean): CookieOptions {
+  const ttl = rememberMe ? env.JWT_REMEMBER_ME_EXPIRES_IN : env.JWT_SESSION_EXPIRES_IN;
+  return {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    // Restrict to the refresh endpoint so the token is never sent elsewhere
+    path: "/api/auth/refresh",
+    maxAge: jwtExpiryMsFromExpiresIn(ttl),
+  };
+}

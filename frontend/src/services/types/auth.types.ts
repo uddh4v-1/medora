@@ -3,7 +3,7 @@
  */
 
 /** Roles returned on `User`/`AuthUser`. */
-export type UserRole = "Owner" | "Doctor" | "Receptionist";
+export type UserRole = "Owner" | "Doctor" | "Receptionist" | "SuperAdmin";
 
 /** Embedded clinic stub on authenticated user responses. */
 export interface ClinicSummary {
@@ -18,6 +18,7 @@ export interface AuthUser {
   email: string;
   name: string;
   role: UserRole;
+  emailVerified: boolean;
   clinic: ClinicSummary | null;
 }
 
@@ -77,4 +78,9 @@ export interface ResetPasswordBody {
 
 export interface ResetPasswordResponse extends ApiErrorFields {
   message?: string;
+}
+
+/** Response body for `POST /api/auth/refresh`. */
+export interface RefreshResponse extends ApiErrorFields {
+  user?: AuthUser;
 }

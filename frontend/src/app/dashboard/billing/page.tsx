@@ -1,13 +1,12 @@
 "use client";
 
-import {
-  type Invoice,
-  nextInvoiceNumber,
-} from "@/lib/dashboard-content";
+import { type Invoice } from "@/lib/dashboard-content";
 import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 import { toast } from "sonner";
 
 import { DataListSkeleton } from "@/components/dashboard/data-list-skeleton";
+import { createInvoice } from "@/services/invoices.service";
+import { patchInvoiceStatus } from "@/services/invoices.service";
 import { DashboardPageHeader } from "../_components/page-header";
 import { InvoicesTable } from "./_components/invoices-table";
 import {
@@ -15,31 +14,40 @@ import {
   NewInvoiceDialog,
 } from "./_components/new-invoice-dialog";
 
-function todayIso() {
-  const d = new Date();
-  return `${d.getFullYear()}-${(d.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-}
-
 export default function BillingPage() {
   const hydrated = useHydrated();
   const invoices = useClinicStore((s) => s.invoices);
+  const teamMembers = useClinicStore((s) => s.teamMembers);
   const addInvoice = useClinicStore((s) => s.addInvoice);
   const markInvoicePaid = useClinicStore((s) => s.markInvoicePaid);
 
-  function handleCreate(input: NewInvoiceInput) {
+  const doctors = teamMembers.filter((m) => m.role === "Doctor");
+
+  async function handleCreate(input: NewInvoiceInput) {
+    const doctor = doctors.find((d) => d.id === input.doctorId);
+    const res = await createInvoice({
+      patientId: input.patientId,
+      doctorId: input.doctorId || null,
+      total: Math.round(input.total),
+      discount: input.discount ? Math.round(input.discount) : null,
+      gst: input.gstAmount ? Math.round(input.gstAmount) : null,
+      items: input.items.map((it) => ({ label: it.label, amount: Math.round(it.amount) })),
+    });
+    if (!res.ok) {
+      toast.error("Failed to create invoice");
+      return;
+    }
     const newInvoice: Invoice = {
-      id: crypto.randomUUID(),
-      number: nextInvoiceNumber(invoices),
-      patient: input.patientName,
-      total: input.total,
+      id: res.data.id,
+      number: res.data.number,
+      patient: res.data.patientName,
+      total: res.data.total,
       status: "unpaid",
-      createdAt: todayIso(),
-      items: input.items,
-      discount: input.discount,
-      gst: input.gstAmount,
-      doctor: input.doctor,
+      createdAt: res.data.issuedAt,
+      items: res.data.items,
+      discount: res.data.discount ?? undefined,
+      gst: res.data.gst ?? undefined,
+      doctor: doctor?.name ?? res.data.doctorName ?? undefined,
     };
     addInvoice(newInvoice);
     toast.success("Invoice created", {
@@ -47,8 +55,13 @@ export default function BillingPage() {
     });
   }
 
-  function handleMarkPaid(id: string) {
+  async function handleMarkPaid(id: string) {
     const inv = invoices.find((i) => i.id === id);
+    const res = await patchInvoiceStatus(id, "paid");
+    if (!res.ok) {
+      toast.error("Failed to record payment");
+      return;
+    }
     markInvoicePaid(id);
     if (inv) {
       toast.success("Payment recorded", { description: inv.number });

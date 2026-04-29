@@ -4,7 +4,7 @@ declare global {
       auth?: {
         userId: string;
         email: string;
-        role: "Owner" | "Doctor" | "Receptionist";
+        role: "Owner" | "Doctor" | "Receptionist" | "SuperAdmin";
         clinicId?: string;
       };
     }

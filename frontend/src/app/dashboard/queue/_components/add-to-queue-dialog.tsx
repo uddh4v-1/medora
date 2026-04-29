@@ -20,10 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { doctors } from "@/lib/dashboard-content";
 import { useClinicStore } from "@/stores/clinic-store";
 
 export type NewVisitInput = {
+  patientId: string;
+  doctorId: string | null;
   patient: string;
   doctor: string;
   reason: string;
@@ -40,10 +41,13 @@ export function AddToQueueDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [patientId, setPatientId] = useState("");
-  const [doctorId, setDoctorId] = useState(doctors[0]?.id ?? "");
+  const [doctorId, setDoctorId] = useState("");
   const [reason, setReason] = useState("");
   const fieldIdPrefix = useId();
+
   const patients = useClinicStore((s) => s.patients);
+  const teamMembers = useClinicStore((s) => s.teamMembers);
+  const doctors = teamMembers.filter((m) => m.role === "Doctor");
 
   function reset() {
     setPatientId("");
@@ -53,13 +57,15 @@ export function AddToQueueDialog({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!patientId || !doctorId) return;
+    if (!patientId) return;
     const patient = patients.find((p) => p.id === patientId);
     const doctor = doctors.find((d) => d.id === doctorId);
-    if (!patient || !doctor) return;
+    if (!patient) return;
     onCreate({
+      patientId,
+      doctorId: doctorId || null,
       patient: patient.name,
-      doctor: doctor.name,
+      doctor: doctor?.name ?? "Unassigned",
       reason: reason.trim(),
       title: "Visit",
     });
@@ -137,9 +143,7 @@ export function AddToQueueDialog({
                   {patients.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">
-                          {p.name}
-                        </span>
+                        <span className="font-medium text-foreground">{p.name}</span>
                         <span className="text-muted-foreground">•</span>
                         <span className="text-muted-foreground">{p.phone}</span>
                       </span>
@@ -161,12 +165,12 @@ export function AddToQueueDialog({
                   id={`${fieldIdPrefix}-doctor`}
                   className="!h-10 w-full rounded-lg border-border bg-card text-sm"
                 >
-                  <SelectValue placeholder="Select doctor" />
+                  <SelectValue placeholder="Select doctor (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {doctors.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
-                      {d.name} • {d.specialty}
+                      {d.name}{d.specialty ? ` • ${d.specialty}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -202,7 +206,7 @@ export function AddToQueueDialog({
             </DialogClose>
             <Button
               type="submit"
-              disabled={!patientId || !doctorId}
+              disabled={!patientId}
               className="h-9 rounded-lg bg-brand px-4 text-sm font-medium text-brand-foreground shadow-brand hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Check in

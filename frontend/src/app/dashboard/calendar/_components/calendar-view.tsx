@@ -3,13 +3,24 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { type NewAppointmentInput } from "@/lib/dashboard-content";
 import { useClinicStore } from "@/stores/clinic-store";
+import { createAppointment } from "@/services/appointments.service";
+import type { AppointmentStatus } from "@/lib/dashboard-content";
 
 import { DashboardPageHeader } from "../../_components/page-header";
 import { DateStepper } from "./date-stepper";
 import { DaySchedule } from "./day-schedule";
 import { NewAppointmentDialog } from "./new-appointment-dialog";
+
+type NewAppointmentFormInput = {
+  patientId: string;
+  patientName: string;
+  doctorId: string | null;
+  doctorName: string;
+  reason: string;
+  startTime: string;
+  endTime: string;
+};
 
 export function CalendarView({ initialDate }: { initialDate: string }) {
   const appointments = useClinicStore((s) => s.appointments);
@@ -19,20 +30,37 @@ export function CalendarView({ initialDate }: { initialDate: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [defaultTime, setDefaultTime] = useState<string | null>(null);
 
-  function handleCreate(input: NewAppointmentInput) {
-    addAppointment({
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `apt-${Date.now()}`,
-      patient: input.patient,
-      doctor: input.doctor,
-      reason: input.reason,
+  async function handleCreate(input: NewAppointmentFormInput) {
+    const dateStr = [
+      day.getFullYear(),
+      String(day.getMonth() + 1).padStart(2, "0"),
+      String(day.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const res = await createAppointment({
+      patientId: input.patientId,
+      doctorId: input.doctorId,
+      date: dateStr,
       startTime: input.startTime,
       endTime: input.endTime,
-      status: "scheduled",
+      reason: input.reason,
     });
-    toast.success("Appointment booked", { description: input.patient });
+
+    if (!res.ok) {
+      toast.error("Failed to book appointment");
+      return;
+    }
+
+    addAppointment({
+      id: res.data.id,
+      patient: res.data.patientName,
+      doctor: res.data.doctorName ?? "Unassigned",
+      startTime: res.data.startTime,
+      endTime: res.data.endTime,
+      reason: res.data.reason,
+      status: res.data.status as AppointmentStatus,
+    });
+    toast.success("Appointment booked", { description: res.data.patientName });
   }
 
   function openNewAt(slot: string) {

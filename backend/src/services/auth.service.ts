@@ -1,5 +1,7 @@
+import crypto from "crypto";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
+import ms from "ms";
 import type { Prisma } from "@prisma/client";
 
 import { getEnv } from "@/config/env";
@@ -11,7 +13,8 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
-  role: "Owner" | "Doctor" | "Receptionist";
+  role: "Owner" | "Doctor" | "Receptionist" | "SuperAdmin";
+  emailVerified: boolean;
   clinic: { id: string; name: string; slug: string } | null;
 };
 
@@ -78,7 +81,12 @@ export function verifyAccessToken(token: string): JwtAccessPayload {
       throw new HttpError(401, "Invalid session", "INVALID_TOKEN");
     }
     const role = (decoded as { role?: unknown }).role;
-    if (role !== "Owner" && role !== "Doctor" && role !== "Receptionist") {
+    if (
+      role !== "Owner" &&
+      role !== "Doctor" &&
+      role !== "Receptionist" &&
+      role !== "SuperAdmin"
+    ) {
       throw new HttpError(401, "Invalid session", "INVALID_TOKEN");
     }
     const clinicId = (decoded as { clinicId?: unknown }).clinicId;
@@ -107,6 +115,7 @@ function rowToAuthUser(row: {
   email: string;
   name: string;
   role: string;
+  emailVerified: boolean;
   clinic: { id: string; name: string; slug: string } | null;
 }): AuthUser {
   const role = row.role as AuthUser["role"];
@@ -115,6 +124,7 @@ function rowToAuthUser(row: {
     email: row.email,
     name: row.name,
     role,
+    emailVerified: row.emailVerified,
     clinic: row.clinic,
   };
 }
@@ -133,6 +143,7 @@ export async function loginWithCredentials(
       email: true,
       name: true,
       role: true,
+      emailVerified: true,
       passwordHash: true,
       clinic: {
         select: { id: true, name: true, slug: true },
@@ -159,6 +170,7 @@ export async function loginWithCredentials(
     email: user.email,
     name: user.name,
     role: user.role,
+    emailVerified: user.emailVerified,
     clinic: user.clinic,
   });
 
@@ -239,6 +251,7 @@ export async function registerClinicOwner(input: {
           email: true,
           name: true,
           role: true,
+          emailVerified: true,
           clinic: {
             select: { id: true, name: true, slug: true },
           },
@@ -280,6 +293,84 @@ export async function registerClinicOwner(input: {
   }
 }
 
+export async function createRefreshToken(
+  userId: string,
+  rememberMe: boolean,
+): Promise<string> {
+  const env = getEnv();
+  const ttl = rememberMe ? env.JWT_REMEMBER_ME_EXPIRES_IN : env.JWT_SESSION_EXPIRES_IN;
+  const expiresAt = new Date(
+    Date.now() + (ms(ttl as Parameters<typeof ms>[0]) as number),
+  );
+
+  const rawToken = crypto.randomBytes(32).toString("base64url");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  await prisma.refreshToken.create({
+    data: { tokenHash, userId, rememberMe, expiresAt },
+  });
+
+  return rawToken;
+}
+
+export async function rotateRefreshToken(rawToken: string): Promise<{
+  accessToken: string;
+  rawRefreshToken: string;
+  rememberMe: boolean;
+  user: AuthUser;
+}> {
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  const record = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
+    select: { id: true, userId: true, rememberMe: true, expiresAt: true },
+  });
+
+  if (!record) throw new HttpError(401, "Invalid or expired session", "INVALID_TOKEN");
+  if (record.expiresAt < new Date()) {
+    await prisma.refreshToken.delete({ where: { id: record.id } });
+    throw new HttpError(401, "Session expired. Please sign in again.", "TOKEN_EXPIRED");
+  }
+
+  const user = await findUserById(record.userId);
+  if (!user) throw new HttpError(401, "User not found", "USER_NOT_FOUND");
+
+  // Delete the used token and issue a fresh one (rotation)
+  await prisma.refreshToken.delete({ where: { id: record.id } });
+  const newRawRefresh = await createRefreshToken(record.userId, record.rememberMe);
+
+  const env = getEnv();
+  const accessToken = issueAccessToken(
+    { id: record.userId, email: user.email, role: user.role, clinicId: user.clinic?.id },
+    { expiresIn: env.JWT_ACCESS_EXPIRES_IN },
+  );
+
+  return { accessToken, rawRefreshToken: newRawRefresh, rememberMe: record.rememberMe, user };
+}
+
+export async function revokeRefreshToken(rawToken: string): Promise<void> {
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  await prisma.refreshToken.deleteMany({ where: { tokenHash } });
+}
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true },
+  });
+  if (!user) throw new HttpError(404, "User not found", "USER_NOT_FOUND");
+
+  const passwordOk = await argon2.verify(user.passwordHash, currentPassword);
+  if (!passwordOk) throw new HttpError(401, "Current password is incorrect", "INVALID_CREDENTIALS");
+
+  const newHash = await hashPassword(newPassword);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+}
+
 /** Load user from DB (preferred for `/me` to reflect role/email updates). */
 export async function findUserById(id: string): Promise<AuthUser | null> {
   const row = await prisma.user.findUnique({
@@ -289,6 +380,7 @@ export async function findUserById(id: string): Promise<AuthUser | null> {
       email: true,
       name: true,
       role: true,
+      emailVerified: true,
       clinic: {
         select: { id: true, name: true, slug: true },
       },

@@ -5,6 +5,7 @@ import type {
   ForgotPasswordResponse,
   GetMeResponse,
   LoginBody,
+  RefreshResponse,
   RegisterBody,
   ResetPasswordBody,
   ResetPasswordResponse,
@@ -48,6 +49,14 @@ export async function postLogout() {
   return { ok: r.ok, status: r.status };
 }
 
+/**
+ * Silently rotates the refresh cookie and issues a new access cookie.
+ * Called automatically by the Axios interceptor — call manually only if needed.
+ */
+export async function postRefreshToken() {
+  return apiPost<RefreshResponse>(`${AUTH_BASE}/refresh`);
+}
+
 /** Forgot password — always treat 200 generic success (never enumerate emails). */
 export async function postForgotPassword(body: ForgotPasswordBody) {
   return apiPost<ForgotPasswordResponse>(
@@ -70,6 +79,7 @@ export type {
   ForgotPasswordResponse,
   GetMeResponse,
   LoginBody,
+  RefreshResponse,
   RegisterBody,
   ResetPasswordBody,
   ResetPasswordResponse,

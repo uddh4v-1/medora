@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,38 +23,7 @@ export function LoginForm() {
     onSubmit,
   } = useLoginForm();
 
-  const textFields = [
-    {
-      id: "email" as const,
-      type: "email" as const,
-      label: t("common.email"),
-      autoComplete: "email" as const,
-      placeholder: t("auth.emailPlaceholder"),
-      value: email,
-      setValue: setEmail,
-    },
-    {
-      id: "password" as const,
-      type: "password" as const,
-      label: t("common.password"),
-      autoComplete: "current-password" as const,
-      placeholder: "••••••••",
-      value: password,
-      setValue: setPassword,
-      headerExtra: (
-        <Link
-          href={
-            email.trim()
-              ? `/forgot-password?email=${encodeURIComponent(email.trim())}`
-              : "/forgot-password"
-          }
-          className="text-[11px] font-medium text-brand transition-colors hover:text-brand/80"
-        >
-          {t("auth.forgotPassword")}
-        </Link>
-      ),
-    },
-  ];
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background px-6 py-10 lg:px-16">
@@ -76,37 +46,59 @@ export function LoginForm() {
         </header>
 
         <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
-          {textFields.map((field) => (
-            <div key={field.id} className="flex flex-col gap-2">
-              {field.headerExtra ? (
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor={field.id}
-                    className="text-foreground"
-                  >
-                    {field.label}
-                  </Label>
-                  {field.headerExtra}
-                </div>
-              ) : (
-                <Label
-                  htmlFor={field.id}
-                  className="text-foreground"
-                >
-                  {field.label}
-                </Label>
-              )}
-              <Input
-                id={field.id}
-                type={field.type}
-                autoComplete={field.autoComplete}
-                placeholder={field.placeholder}
-                value={field.value}
-                onChange={(e) => field.setValue(e.target.value)}
-                className="h-11 rounded-lg border-border bg-card px-3 text-sm shadow-sm"
-              />
+          {/* Email */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email" className="text-foreground">
+              {t("common.email")}
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder={t("auth.emailPlaceholder")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-11 rounded-lg border-border bg-card px-3 text-sm shadow-sm"
+            />
+          </div>
+
+          {/* Password */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-foreground">
+                {t("common.password")}
+              </Label>
+              <Link
+                href={
+                  email.trim()
+                    ? `/forgot-password?email=${encodeURIComponent(email.trim())}`
+                    : "/forgot-password"
+                }
+                className="text-[11px] font-medium text-brand transition-colors hover:text-brand/80"
+              >
+                {t("auth.forgotPassword")}
+              </Link>
             </div>
-          ))}
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11 rounded-lg border-border bg-card pr-10 pl-3 text-sm shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
 
           <div className="flex items-center gap-2.5">
             <input

@@ -15,6 +15,7 @@ import {
 } from "@/lib/dashboard-content";
 import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 import { patchDashboardQueueStatus } from "@/services/dashboard.service";
+import { createVisit } from "@/services/visits.service";
 
 import { DashboardPageHeader } from "../_components/page-header";
 import {
@@ -93,20 +94,27 @@ export default function QueuePage() {
 
   const nextVisit = waitingQueue[0] ?? null;
 
-  function handleCreate(input: NewVisitInput) {
-    addVisit({
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `v-${Date.now()}`,
-      patient: input.patient,
-      doctor: input.doctor,
+  async function handleCreate(input: NewVisitInput) {
+    const res = await createVisit({
+      patientId: input.patientId,
+      doctorId: input.doctorId ?? null,
       title: input.title,
       reason: input.reason || "Consultation",
-      startedAt: nowIso(),
+    });
+    if (!res.ok) {
+      toast.error("Failed to add to queue");
+      return;
+    }
+    addVisit({
+      id: res.data.id,
+      patient: res.data.patientName,
+      doctor: res.data.doctorName ?? "Unassigned",
+      title: res.data.title,
+      reason: res.data.reason,
+      startedAt: res.data.startedAt,
       status: "waiting",
     });
-    toast.success("Added to queue", { description: input.patient });
+    toast.success("Added to queue", { description: res.data.patientName });
   }
 
   async function handleStatusChange(

@@ -34,7 +34,7 @@ export type Notification = {
 
 export type Session = {
   email: string;
-  role: "Owner" | "Doctor" | "Receptionist";
+  role: "Owner" | "Doctor" | "Receptionist" | "SuperAdmin";
   signedInAt: string;
   /** From `/api/auth/*` — used when signed in via the API */
   userId?: string;
@@ -56,6 +56,14 @@ export type PatientBroadcastRecord = {
   sentAt: string;
 };
 
+/** Pre-computed stats from the /dashboard/overview API. */
+export type OverviewStats = {
+  appointmentsToday: number;
+  waitingCount: number;
+  patientsTotal: number;
+  unpaidCount: number;
+};
+
 type ClinicState = {
   session: Session | null;
   patients: Patient[];
@@ -65,8 +73,10 @@ type ClinicState = {
   invoices: Invoice[];
   teamMembers: TeamMember[];
   notificationsRead: string[];
-
   broadcastHistory: PatientBroadcastRecord[];
+
+  /** Accurate counts from the server overview — use these for stat cards. */
+  overviewStats: OverviewStats | null;
 
   signIn: (s: Session) => void;
   signOut: () => void;
@@ -87,12 +97,16 @@ type ClinicState = {
 
   addTeamMember: (m: TeamMember) => void;
   removeTeamMember: (id: string) => void;
+  setTeamMembers: (members: TeamMember[]) => void;
 
   hydrateDashboardData: (payload: {
     patients: Patient[];
     visits: Visit[];
     appointments: Appointment[];
     invoices: Invoice[];
+    prescriptions: Prescription[];
+    teamMembers: TeamMember[];
+    overviewStats: OverviewStats;
   }) => void;
 
   markNotificationsRead: (ids: string[]) => void;
@@ -113,6 +127,7 @@ const initialState = {
   teamMembers: seedTeamMembers,
   notificationsRead: [] as string[],
   broadcastHistory: [] as PatientBroadcastRecord[],
+  overviewStats: null as OverviewStats | null,
 };
 
 export const useClinicStore = create<ClinicState>()(
@@ -124,7 +139,7 @@ export const useClinicStore = create<ClinicState>()(
       signOut: () => set({ session: null }),
 
       addPatient: (p) =>
-        set((s) => ({ patients: [...s.patients, p] })),
+        set((s) => ({ patients: [p, ...s.patients] })),
       updatePatient: (id, patch) =>
         set((s) => ({
           patients: s.patients.map((p) =>
@@ -132,14 +147,14 @@ export const useClinicStore = create<ClinicState>()(
           ),
         })),
 
-      addVisit: (v) => set((s) => ({ visits: [...s.visits, v] })),
+      addVisit: (v) => set((s) => ({ visits: [v, ...s.visits] })),
       setVisitStatus: (id, status) =>
         set((s) => ({
           visits: s.visits.map((v) => (v.id === id ? { ...v, status } : v)),
         })),
 
       addAppointment: (a) =>
-        set((s) => ({ appointments: [...s.appointments, a] })),
+        set((s) => ({ appointments: [a, ...s.appointments] })),
       setAppointmentStatus: (id, status) =>
         set((s) => ({
           appointments: s.appointments.map((a) =>
@@ -165,6 +180,7 @@ export const useClinicStore = create<ClinicState>()(
         set((s) => ({
           teamMembers: s.teamMembers.filter((m) => m.id !== id),
         })),
+      setTeamMembers: (members) => set({ teamMembers: members }),
 
       hydrateDashboardData: (payload) =>
         set(() => ({
@@ -172,6 +188,9 @@ export const useClinicStore = create<ClinicState>()(
           visits: payload.visits,
           appointments: payload.appointments,
           invoices: payload.invoices,
+          prescriptions: payload.prescriptions,
+          teamMembers: payload.teamMembers,
+          overviewStats: payload.overviewStats,
         })),
 
       markNotificationsRead: (ids) =>
@@ -200,7 +219,7 @@ export const useClinicStore = create<ClinicState>()(
     }),
     {
       name: "medora-clinic-store",
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
       migrate: (persisted, version) => {
         if (persisted === null || typeof persisted !== "object") {
@@ -214,6 +233,9 @@ export const useClinicStore = create<ClinicState>()(
               ? s.broadcastHistory
               : [],
           };
+        }
+        if (version < 4) {
+          return { ...s, overviewStats: null };
         }
         return persisted;
       },

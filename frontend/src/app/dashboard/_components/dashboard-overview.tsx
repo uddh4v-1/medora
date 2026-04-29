@@ -17,6 +17,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 import { useDashboardSession } from "../_hooks/use-dashboard-session";
 
+
 import { ActivityFeed } from "./activity-feed";
 import { AiInsight } from "./ai-insight";
 import { NowServingMini } from "./now-serving-mini";
@@ -44,19 +45,18 @@ export function DashboardOverview() {
   const { shortName, clinicName } = useDashboardSession();
   const appointments = useClinicStore((s) => s.appointments);
   const visits = useClinicStore((s) => s.visits);
-  const invoices = useClinicStore((s) => s.invoices);
-  const patients = useClinicStore((s) => s.patients);
+  const overviewStats = useClinicStore((s) => s.overviewStats);
 
   const eyebrow = formatTodayEyebrow(bcp47);
-  const waiting = visits.filter((v) => v.status === "waiting").length;
   const inProgress = visits.find((v) => v.status === "in-progress") ?? null;
-  const unpaid = invoices.filter((inv) => inv.status === "unpaid").length;
+  const waiting = overviewStats?.waitingCount ?? visits.filter((v) => v.status === "waiting").length;
+  const unpaid = overviewStats?.unpaidCount ?? 0;
 
   const stats: DashboardStat[] = [
     {
       id: "appts",
       label: t("dashboard.stat.appointments"),
-      value: appointments.length.toString(),
+      value: (overviewStats?.appointmentsToday ?? appointments.length).toString(),
       caption: t("dashboard.stat.appointmentsCap"),
       icon: CalendarDays,
       tone: "info",
@@ -72,7 +72,7 @@ export function DashboardOverview() {
     {
       id: "patients",
       label: t("dashboard.stat.patients"),
-      value: patients.length.toString(),
+      value: (overviewStats?.patientsTotal ?? 0).toString(),
       caption: t("dashboard.stat.lifetime"),
       icon: Users,
       tone: "brand",

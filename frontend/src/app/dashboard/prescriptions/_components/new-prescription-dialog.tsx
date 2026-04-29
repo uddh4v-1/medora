@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  doctors,
   durationOptions,
   frequencyOptions,
   type Medication,
@@ -40,6 +39,7 @@ export type NewPrescriptionInput = {
   notes: string;
   medications: Medication[];
 };
+
 
 const emptyMed = (): Medication => ({
   id:
@@ -66,13 +66,15 @@ export function NewPrescriptionDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [patientId, setPatientId] = useState(defaultPatientId ?? "");
-  const [doctorId, setDoctorId] = useState(doctors[0]?.id ?? "");
+  const [doctorId, setDoctorId] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
   const [meds, setMeds] = useState<Medication[]>([emptyMed()]);
 
   const fieldIdPrefix = useId();
   const patients = useClinicStore((s) => s.patients);
+  const teamMembers = useClinicStore((s) => s.teamMembers);
+  const doctors = teamMembers.filter((m) => m.role === "Doctor");
 
   function updateMed(id: string, patch: Partial<Omit<Medication, "id">>) {
     setMeds((prev) =>
@@ -95,6 +97,7 @@ export function NewPrescriptionDialog({
     setNotes("");
     setMeds([emptyMed()]);
   }
+
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

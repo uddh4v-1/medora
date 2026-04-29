@@ -34,13 +34,21 @@ import {
   addMinutes,
   type Appointment,
   currentClinic,
-  doctors,
   format12h,
   getAvailableSlots,
-  type NewAppointmentInput,
 } from "@/lib/dashboard-content";
 import { useClinicStore } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
+
+type NewAppointmentFormInput = {
+  patientId: string;
+  patientName: string;
+  doctorId: string | null;
+  doctorName: string;
+  reason: string;
+  startTime: string;
+  endTime: string;
+};
 
 type Props = {
   open?: boolean;
@@ -48,7 +56,7 @@ type Props = {
   appointments?: Appointment[];
   defaultTime?: string | null;
   day?: Date;
-  onCreate?: (input: NewAppointmentInput) => void;
+  onCreate?: (input: NewAppointmentFormInput) => void;
 };
 
 export function NewAppointmentDialog({
@@ -78,11 +86,17 @@ export function NewAppointmentDialog({
     [appointments],
   );
 
-  const [patient, setPatient] = useState("");
-  const [doctor, setDoctor] = useState(doctors[0]?.id ?? "");
+  const [patientId, setPatientId] = useState("");
+  const [doctorId, setDoctorId] = useState("");
   const [reason, setReason] = useState("");
   const [slot, setSlot] = useState<string | null>(null);
+
   const patients = useClinicStore((s) => s.patients);
+  const teamMembers = useClinicStore((s) => s.teamMembers);
+  const doctors = useMemo(
+    () => teamMembers.filter((m) => m.role === "Doctor"),
+    [teamMembers],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -94,21 +108,23 @@ export function NewAppointmentDialog({
   }, [open, defaultTime, availableSlots]);
 
   function reset() {
-    setPatient("");
-    setDoctor(doctors[0]?.id ?? "");
+    setPatientId("");
+    setDoctorId(doctors[0]?.id ?? "");
     setReason("");
     setSlot(null);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!patient || !doctor || !slot) return;
-    const patientName =
-      patients.find((p) => p.id === patient)?.name ?? patient;
-    const doctorName = doctors.find((d) => d.id === doctor)?.name ?? doctor;
+    if (!patientId || !slot) return;
+    const patient = patients.find((p) => p.id === patientId);
+    const doctor = doctors.find((d) => d.id === doctorId);
+    if (!patient) return;
     onCreate?.({
-      patient: patientName,
-      doctor: doctorName,
+      patientId,
+      patientName: patient.name,
+      doctorId: doctorId || null,
+      doctorName: doctor?.name ?? "Unassigned",
       reason: reason.trim() || "Consultation",
       startTime: slot,
       endTime: addMinutes(slot, 30),
@@ -137,7 +153,7 @@ export function NewAppointmentDialog({
         className="gap-0 overflow-hidden p-0 sm:max-w-md"
       >
         <form className="flex flex-col" onSubmit={handleSubmit}>
-          <div className="relative flex items-start gap-3 border-b border-border bg-gradient-to-br from-brand/8 via-brand/3 to-transparent px-6 pt-6 pb-5">
+          <div className="relative flex items-start gap-3 border-b border-border bg-linear-to-br from-brand/8 via-brand/3 to-transparent px-6 pt-6 pb-5">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-foreground shadow-brand">
               <CalendarPlus className="size-5" />
             </span>
@@ -174,8 +190,8 @@ export function NewAppointmentDialog({
                 Patient
               </Label>
               <Select
-                value={patient}
-                onValueChange={setPatient}
+                value={patientId}
+                onValueChange={setPatientId}
                 disabled={patients.length === 0}
               >
                 <SelectTrigger
@@ -220,17 +236,17 @@ export function NewAppointmentDialog({
                 <Stethoscope className="size-3.5" />
                 Doctor
               </Label>
-              <Select value={doctor} onValueChange={setDoctor}>
+              <Select value={doctorId} onValueChange={setDoctorId}>
                 <SelectTrigger
                   id="doctor"
                   className="h-10 w-full rounded-lg border-border bg-card text-sm"
                 >
-                  <SelectValue placeholder="Select doctor" />
+                  <SelectValue placeholder="Select doctor (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {doctors.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
-                      {d.name} • {d.specialty}
+                      {d.name}{d.specialty ? ` • ${d.specialty}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -312,7 +328,7 @@ export function NewAppointmentDialog({
             </DialogClose>
             <Button
               type="submit"
-              disabled={!patient || !doctor || !slot}
+              disabled={!patientId || !slot}
               className="h-9 rounded-lg bg-brand px-4 text-sm font-medium text-brand-foreground shadow-brand hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Book appointment

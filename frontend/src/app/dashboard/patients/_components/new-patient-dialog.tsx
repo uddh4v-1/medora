@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { type Gender, type Patient } from "@/lib/dashboard-content";
 import { useClinicStore } from "@/stores/clinic-store";
+import { createPatient } from "@/services/patients.service";
 import { toast } from "sonner";
 
 const fieldClass =
@@ -37,6 +38,7 @@ export function NewPatientDialog() {
   const [address, setAddress] = useState("");
 
   const addPatient = useClinicStore((s) => s.addPatient);
+  const [saving, setSaving] = useState(false);
 
   function reset() {
     setName("");
@@ -47,17 +49,32 @@ export function NewPatientDialog() {
     setAddress("");
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) return;
-    const newPatient: Patient = {
-      id: crypto.randomUUID(),
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    const res = await createPatient({
       name: name.trim(),
       phone: phone.trim(),
       age: age ? Number.parseInt(age, 10) : null,
       gender,
       email: email.trim() || undefined,
       address: address.trim() || undefined,
+    });
+    setSaving(false);
+    if (!res.ok) {
+      toast.error("Failed to add patient");
+      return;
+    }
+    const newPatient: Patient = {
+      id: res.data.id,
+      name: res.data.name,
+      phone: res.data.phone,
+      age: res.data.age,
+      gender: (res.data.gender as Patient["gender"]) ?? null,
+      email: res.data.email ?? undefined,
+      address: res.data.address ?? undefined,
+      nextVisitDate: res.data.nextVisitDate,
     };
     addPatient(newPatient);
     reset();
@@ -217,9 +234,10 @@ export function NewPatientDialog() {
           <div className="px-6 pt-1 pb-6">
             <Button
               type="submit"
-              className="h-11 w-full rounded-lg bg-brand text-sm font-semibold text-brand-foreground shadow-brand hover:bg-brand/90"
+              disabled={saving}
+              className="h-11 w-full rounded-lg bg-brand text-sm font-semibold text-brand-foreground shadow-brand hover:bg-brand/90 disabled:opacity-60"
             >
-              Save patient
+              {saving ? "Saving…" : "Save patient"}
             </Button>
           </div>
         </form>

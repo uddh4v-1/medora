@@ -21,9 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  doctors,
   formatCurrency,
-  type Invoice,
   type InvoiceItem,
 } from "@/lib/dashboard-content";
 import { useClinicStore } from "@/stores/clinic-store";
@@ -38,6 +36,7 @@ type InvoiceLine = {
 export type NewInvoiceInput = {
   patientId: string;
   patientName: string;
+  doctorId: string;
   total: number;
   subtotal: number;
   discount: number;
@@ -76,6 +75,7 @@ export function NewInvoiceDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [patientId, setPatientId] = useState<string>(defaultPatientId ?? "");
+  const [doctorId, setDoctorId] = useState("");
   const [items, setItems] = useState<InvoiceLine[]>([defaultLine]);
   const [discount, setDiscount] = useState(0);
   const [gstPercent, setGstPercent] = useState(0);
@@ -113,21 +113,29 @@ export function NewInvoiceDialog({
 
   function resetForm() {
     setPatientId(defaultPatientId ?? "");
+    setDoctorId("");
     setItems([defaultLine]);
     setDiscount(0);
     setGstPercent(0);
   }
 
   const patients = useClinicStore((s) => s.patients);
+  const teamMembers = useClinicStore((s) => s.teamMembers);
+  const doctors = useMemo(
+    () => teamMembers.filter((m) => m.role === "Doctor"),
+    [teamMembers],
+  );
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!patientId) return;
     const patient = patients.find((p) => p.id === patientId);
     if (!patient) return;
+    const doctor = doctors.find((d) => d.id === doctorId);
     onCreate({
       patientId,
       patientName: patient.name,
+      doctorId,
       total,
       subtotal,
       discount,
@@ -137,7 +145,7 @@ export function NewInvoiceDialog({
         label: `${it.description}${it.quantity > 1 ? ` × ${it.quantity}` : ""}`,
         amount: it.price * it.quantity,
       })),
-      doctor: doctors[0]?.name ?? "",
+      doctor: doctor?.name ?? "",
     });
     resetForm();
     setOpen(false);
@@ -183,38 +191,64 @@ export function NewInvoiceDialog({
           </div>
 
           <div className="flex flex-col gap-5 px-6 py-5">
-            <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor={`${fieldIdPrefix}-patient`}
-                className="text-sm font-medium text-foreground"
-              >
-                Patient
-              </Label>
-              <Select
-                value={patientId}
-                onValueChange={setPatientId}
-                disabled={patients.length === 0 || lockPatient}
-              >
-                <SelectTrigger
-                  id={`${fieldIdPrefix}-patient`}
-                  className="!h-10 w-full rounded-lg border-border bg-card text-sm"
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor={`${fieldIdPrefix}-patient`}
+                  className="text-sm font-medium text-foreground"
                 >
-                  <SelectValue placeholder="Select patient" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">
-                          {p.name}
+                  Patient
+                </Label>
+                <Select
+                  value={patientId}
+                  onValueChange={setPatientId}
+                  disabled={patients.length === 0 || lockPatient}
+                >
+                  <SelectTrigger
+                    id={`${fieldIdPrefix}-patient`}
+                    className="h-10! w-full rounded-lg border-border bg-card text-sm"
+                  >
+                    <SelectValue placeholder="Select patient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {patients.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-medium text-foreground">
+                            {p.name}
+                          </span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-muted-foreground">{p.phone}</span>
                         </span>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="text-muted-foreground">{p.phone}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor={`${fieldIdPrefix}-doctor`}
+                  className="text-sm font-medium text-foreground"
+                >
+                  Doctor
+                </Label>
+                <Select value={doctorId} onValueChange={setDoctorId}>
+                  <SelectTrigger
+                    id={`${fieldIdPrefix}-doctor`}
+                    className="h-10! w-full rounded-lg border-border bg-card text-sm"
+                  >
+                    <SelectValue placeholder="Select doctor (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {doctors.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -365,5 +399,3 @@ export function NewInvoiceDialog({
     </Dialog>
   );
 }
-
-export type { Invoice };

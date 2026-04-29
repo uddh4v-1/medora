@@ -71,3 +71,23 @@ export const resetPasswordBodySchema = z.object({
 });
 
 export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
+
+export const verifyEmailBodySchema = z.object({
+  token: z.string().min(1, "Verification token is missing").max(600),
+});
+
+export type VerifyEmailBody = z.infer<typeof verifyEmailBodySchema>;
+
+export const changePasswordBodySchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required").max(500),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(500)
+    .refine(strongNewPassword, {
+      message:
+        "Password must include uppercase and lowercase letters, a number, and a special character",
+    }),
+});
+
+export type ChangePasswordBody = z.infer<typeof changePasswordBodySchema>;
