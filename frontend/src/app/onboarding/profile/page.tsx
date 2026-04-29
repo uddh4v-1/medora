@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useOnboardingStore } from "@/lib/onboarding-store";
+import { useOnboardingStore } from "@/stores/onboarding-store";
 
 const TIMEZONES = [
   { value: "Asia/Kolkata", label: "Asia / Kolkata (IST · GMT+5:30)" },

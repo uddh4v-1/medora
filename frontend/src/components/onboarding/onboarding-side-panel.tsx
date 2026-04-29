@@ -4,7 +4,7 @@ import { Stethoscope } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import { type OnboardingStep, WIZARD_STEPS } from "@/lib/onboarding-store";
+import { type OnboardingStep, WIZARD_STEPS } from "@/stores/onboarding-store";
 import { siteConfig } from "@/lib/site-content";
 
 import { metaForStep, STEP_META } from "./step-config";

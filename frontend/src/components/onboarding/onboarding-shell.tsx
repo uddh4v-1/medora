@@ -4,7 +4,7 @@ import { Stethoscope } from "lucide-react";
 import Link from "next/link";
 
 import { siteConfig } from "@/lib/site-content";
-import { type OnboardingStep, useOnboardingStore } from "@/lib/onboarding-store";
+import { type OnboardingStep, useOnboardingStore } from "@/stores/onboarding-store";
 
 import { OnboardingSidePanel } from "./onboarding-side-panel";
 import { OnboardingStepper } from "./onboarding-stepper";

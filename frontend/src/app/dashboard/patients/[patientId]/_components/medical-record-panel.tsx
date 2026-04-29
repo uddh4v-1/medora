@@ -19,7 +19,7 @@ import {
   type PatientNote,
   type VitalsEntry,
 } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 import { currentUser } from "@/lib/dashboard-content";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";

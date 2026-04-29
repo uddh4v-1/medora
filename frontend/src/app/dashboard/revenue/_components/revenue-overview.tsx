@@ -17,7 +17,7 @@ import {
   sumPaidPreviousSevenDays,
 } from "@/lib/dashboard-content";
 import { useI18n } from "@/lib/i18n/provider";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
 
 import { DashboardPageHeader } from "../../_components/page-header";

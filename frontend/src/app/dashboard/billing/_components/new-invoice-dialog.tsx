@@ -26,7 +26,7 @@ import {
   type Invoice,
   type InvoiceItem,
 } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 
 type InvoiceLine = {
   id: string;

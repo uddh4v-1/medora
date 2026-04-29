@@ -11,7 +11,7 @@ import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import { WizardCard } from "@/components/onboarding/wizard-card";
 import { WizardFooter } from "@/components/onboarding/wizard-footer";
 import { cn } from "@/lib/utils";
-import { type Invitee, useOnboardingStore } from "@/lib/onboarding-store";
+import { type Invitee, useOnboardingStore } from "@/stores/onboarding-store";
 
 function makeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

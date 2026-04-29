@@ -12,7 +12,7 @@ import { useMemo } from "react";
 
 import { buildActivityEvents } from "@/lib/activity-feed";
 import { useI18n } from "@/lib/i18n/provider";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
 
 const kindIcon: Record<string, React.ComponentType<{ className?: string }>> = {

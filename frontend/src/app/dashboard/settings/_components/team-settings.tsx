@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { type TeamMember } from "@/lib/dashboard-content";
 import { useI18n } from "@/lib/i18n/provider";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 
 import {
   AddStaffDialog,

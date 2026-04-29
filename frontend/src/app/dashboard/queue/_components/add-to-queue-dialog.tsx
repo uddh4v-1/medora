@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { doctors } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 
 export type NewVisitInput = {
   patient: string;

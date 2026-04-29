@@ -9,7 +9,7 @@ import {
   WEEK_DAYS,
   type WeekDay,
   type WorkingHours,
-} from "@/lib/onboarding-store";
+} from "@/stores/onboarding-store";
 
 type Props = {
   value: WorkingHours;

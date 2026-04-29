@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { DataListSkeleton } from "@/components/dashboard/data-list-skeleton";
 import { Input } from "@/components/ui/input";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 
 import { DashboardPageHeader } from "../_components/page-header";
 import { NewPatientDialog } from "./_components/new-patient-dialog";

@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { DataListSkeleton } from "@/components/dashboard/data-list-skeleton";
 import { buildReports } from "@/lib/reports";
 import { useI18n } from "@/lib/i18n/provider";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 
 import { DashboardPageHeader } from "../../_components/page-header";
 

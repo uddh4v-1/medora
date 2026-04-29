@@ -7,7 +7,7 @@ import { DoctorTabs } from "@/components/onboarding/doctor-tabs";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import { WizardCard } from "@/components/onboarding/wizard-card";
 import { WizardFooter } from "@/components/onboarding/wizard-footer";
-import { useOnboardingStore } from "@/lib/onboarding-store";
+import { useOnboardingStore } from "@/stores/onboarding-store";
 
 export default function ServicesPage() {
   const router = useRouter();

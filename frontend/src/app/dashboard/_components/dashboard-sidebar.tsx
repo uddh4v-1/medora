@@ -5,25 +5,34 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  currentClinic,
-  currentUser,
-  dashboardNav,
-} from "@/lib/dashboard-content";
+import { dashboardNav } from "@/lib/dashboard-content";
 import { siteConfig } from "@/lib/site-content";
 import { useI18n } from "@/lib/i18n/provider";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
+import { useDashboardSession } from "../_hooks/use-dashboard-session";
 import { cn } from "@/lib/utils";
+import { postLogout } from "@/services/auth.service";
 import { toast } from "sonner";
 
 export function DashboardSidebar() {
   const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
-  const session = useClinicStore((s) => s.session);
+  const {
+    session,
+    clinicName,
+    displayName,
+    roleLabel,
+    initials,
+  } = useDashboardSession();
   const signOut = useClinicStore((s) => s.signOut);
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await postLogout();
+    } catch {
+      // Still clear client session when the API isn’t reachable
+    }
     signOut();
     toast.success(t("common.signedOut"));
     router.push("/login");
@@ -39,9 +48,7 @@ export function DashboardSidebar() {
           <span className="text-[15px] font-semibold text-sidebar-foreground">
             {siteConfig.name}
           </span>
-          <span className="text-[11px] text-muted-foreground">
-            {currentClinic.name}
-          </span>
+          <span className="text-[11px] text-muted-foreground">{clinicName}</span>
         </div>
       </div>
 
@@ -82,14 +89,14 @@ export function DashboardSidebar() {
 
         <div className="flex items-center gap-2.5 rounded-md px-2 py-2">
           <span className="flex size-8 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">
-            {currentUser.initials}
+            {initials}
           </span>
           <div className="flex flex-1 flex-col overflow-hidden leading-tight">
             <span className="truncate text-[13px] font-medium text-sidebar-foreground">
-              {currentUser.name}
+              {displayName}
             </span>
             <span className="truncate text-[11px] text-muted-foreground">
-              {session?.email ?? currentUser.role}
+              {session?.email ?? roleLabel}
             </span>
           </div>
           <button

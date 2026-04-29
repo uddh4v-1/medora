@@ -17,8 +17,8 @@ import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import { PublicLinkCard } from "@/components/onboarding/public-link-card";
 import { WizardCard } from "@/components/onboarding/wizard-card";
 import { Button } from "@/components/ui/button";
-import { useClinicStore } from "@/lib/store";
-import { useOnboardingStore } from "@/lib/onboarding-store";
+import { useClinicStore } from "@/stores/clinic-store";
+import { useOnboardingStore } from "@/stores/onboarding-store";
 
 const NEXT_STEPS = [
   {

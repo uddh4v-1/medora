@@ -12,6 +12,24 @@ import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
 
+/** Shallow-merge so consumer `classNames` append instead of replacing critical flex layout. */
+function mergeDayPickerClassNames(
+  base: Record<string, string>,
+  patch?: Partial<Record<string, string | undefined>>,
+): Record<string, string> {
+  if (!patch) return base
+  const out: Record<string, string> = { ...base }
+  for (const key of Object.keys(patch) as (keyof typeof patch)[]) {
+    const val = patch[key]
+    if (val === undefined) continue
+    out[key as string] =
+      key in base && base[key as string] !== undefined
+        ? cn(base[key as string], val)
+        : val
+  }
+  return out
+}
+
 function Calendar({
   className,
   classNames,
@@ -27,23 +45,8 @@ function Calendar({
 }) {
   const defaultClassNames = getDefaultClassNames()
 
-  return (
-    <DayPicker
-      showOutsideDays={showOutsideDays}
-      className={cn(
-        "group/calendar bg-background p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
-        String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
-        String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
-        className
-      )}
-      captionLayout={captionLayout}
-      locale={locale}
-      formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString(locale?.code, { month: "short" }),
-        ...formatters,
-      }}
-      classNames={{
+  const mergedClassNames = mergeDayPickerClassNames(
+    {
         root: cn("w-fit", defaultClassNames.root),
         months: cn(
           "relative flex flex-col gap-4 md:flex-row",
@@ -131,8 +134,27 @@ function Calendar({
           defaultClassNames.disabled
         ),
         hidden: cn("invisible", defaultClassNames.hidden),
-        ...classNames,
+    },
+    classNames,
+  )
+
+  return (
+    <DayPicker
+      showOutsideDays={showOutsideDays}
+      className={cn(
+        "group/calendar bg-background p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
+        String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
+        String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
+        className
+      )}
+      captionLayout={captionLayout}
+      locale={locale}
+      formatters={{
+        formatMonthDropdown: (date) =>
+          date.toLocaleString(locale?.code, { month: "short" }),
+        ...formatters,
       }}
+      classNames={mergedClassNames as React.ComponentProps<typeof DayPicker>["classNames"]}
       components={{
         Root: ({ className, rootRef, ...props }) => {
           return (

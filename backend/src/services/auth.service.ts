@@ -1,20 +1,25 @@
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
+import type { Prisma } from "@prisma/client";
 
 import { getEnv } from "@/config/env";
 import { prisma } from "@/lib/prisma";
+import { normalizeIndianMobile } from "@/utils/phone";
 import { HttpError } from "@/utils/http-error";
 
 export type AuthUser = {
   id: string;
   email: string;
+  name: string;
   role: "Owner" | "Doctor" | "Receptionist";
+  clinic: { id: string; name: string; slug: string } | null;
 };
 
 export type JwtAccessPayload = jwt.JwtPayload & {
   sub: string;
   email: string;
   role: AuthUser["role"];
+  clinicId?: string;
 };
 
 /** Hash a password for storage (e.g. seed or register later). */
@@ -28,19 +33,31 @@ export async function hashPassword(plain: string): Promise<string> {
 }
 
 /** Issue HS256 JWT (same payload used in httpOnly cookie). */
-export function issueAccessToken(user: {
-  id: string;
-  email: string;
-  role: AuthUser["role"];
-}): string {
+export function issueAccessToken(
+  user: {
+    id: string;
+    email: string;
+    role: AuthUser["role"];
+    clinicId?: string | null;
+  },
+  options?: { expiresIn?: string },
+): string {
   const env = getEnv();
-  const payload = {
+  const expiresIn = options?.expiresIn ?? env.JWT_EXPIRES_IN;
+  const payload: jwt.JwtPayload & {
+    sub: string;
+    email: string;
+    role: AuthUser["role"];
+    clinicId?: string;
+  } = {
     sub: user.id,
     email: user.email,
     role: user.role,
   };
+  if (user.clinicId) payload.clinicId = user.clinicId;
+
   return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN,
+    expiresIn,
     issuer: "medora-api",
   } as jwt.SignOptions);
 }
@@ -64,6 +81,10 @@ export function verifyAccessToken(token: string): JwtAccessPayload {
     if (role !== "Owner" && role !== "Doctor" && role !== "Receptionist") {
       throw new HttpError(401, "Invalid session", "INVALID_TOKEN");
     }
+    const clinicId = (decoded as { clinicId?: unknown }).clinicId;
+    if (clinicId !== undefined && clinicId !== null && typeof clinicId !== "string") {
+      throw new HttpError(401, "Invalid session", "INVALID_TOKEN");
+    }
     return decoded as JwtAccessPayload;
   } catch (e) {
     if (e instanceof HttpError) throw e;
@@ -81,14 +102,42 @@ export function bearerToken(req: {
   return raw.length ? raw : null;
 }
 
+function rowToAuthUser(row: {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  clinic: { id: string; name: string; slug: string } | null;
+}): AuthUser {
+  const role = row.role as AuthUser["role"];
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role,
+    clinic: row.clinic,
+  };
+}
+
 export async function loginWithCredentials(
   email: string,
   password: string,
+  rememberMe = false,
 ): Promise<{ token: string; user: AuthUser; signedInAt: string }> {
   const normalizedEmail = email.trim().toLowerCase();
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      passwordHash: true,
+      clinic: {
+        select: { id: true, name: true, slug: true },
+      },
+    },
   });
 
   if (!user) {
@@ -100,46 +149,119 @@ export async function loginWithCredentials(
     throw new HttpError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
 
-  const role = user.role as AuthUser["role"];
+  const env = getEnv();
+  const expiresIn = rememberMe
+    ? env.JWT_REMEMBER_ME_EXPIRES_IN
+    : env.JWT_SESSION_EXPIRES_IN;
 
-  const token = issueAccessToken({
+  const authUser = rowToAuthUser({
     id: user.id,
     email: user.email,
-    role,
+    name: user.name,
+    role: user.role,
+    clinic: user.clinic,
   });
+
+  const token = issueAccessToken(
+    {
+      id: user.id,
+      email: user.email,
+      role: authUser.role,
+      clinicId: user.clinic?.id ?? null,
+    },
+    { expiresIn },
+  );
 
   return {
     token,
-    user: { id: user.id, email: user.email, role },
+    user: authUser,
     signedInAt: new Date().toISOString(),
   };
 }
 
-/** Self-service signup — role `Receptionist`; promote via admin flows later. */
-export async function registerWithCredentials(
-  email: string,
-  password: string,
-): Promise<{ token: string; user: AuthUser; signedInAt: string }> {
-  const normalizedEmail = email.trim().toLowerCase();
+/**
+ * Signup from clinic registration UI — creates clinic + owner user, signs in via cookie.
+ */
+export async function registerClinicOwner(input: {
+  clinicName: string;
+  phone: string;
+  ownerName: string;
+  email: string;
+  password: string;
+  slug: string;
+}): Promise<{ token: string; user: AuthUser; signedInAt: string }> {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const slug = input.slug.trim().toLowerCase();
 
-  const existing = await prisma.user.findUnique({
+  const phoneE164 = normalizeIndianMobile(input.phone);
+  if (!phoneE164) {
+    throw new HttpError(400, "Enter a valid Indian mobile number", "INVALID_PHONE");
+  }
+
+  const existingEmail = await prisma.user.findUnique({
     where: { email: normalizedEmail },
+    select: { id: true },
   });
-  if (existing) {
+  if (existingEmail) {
     throw new HttpError(409, "Email already registered", "EMAIL_IN_USE");
   }
 
-  const passwordHash = await hashPassword(password);
+  const existingSlug = await prisma.clinic.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  if (existingSlug) {
+    throw new HttpError(409, "This clinic URL is already taken", "SLUG_IN_USE");
+  }
 
-  let row;
+  const passwordHash = await hashPassword(input.password);
+
   try {
-    row = await prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        passwordHash,
-        role: "Receptionist",
-      },
+    const { userRow } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const clinic = await tx.clinic.create({
+        data: {
+          name: input.clinicName.trim(),
+          slug,
+          phone: phoneE164,
+        },
+      });
+
+      const userRow = await tx.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash,
+          name: input.ownerName.trim(),
+          role: "Owner",
+          clinicId: clinic.id,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          clinic: {
+            select: { id: true, name: true, slug: true },
+          },
+        },
+      });
+
+      return { userRow };
     });
+
+    const authUser = rowToAuthUser(userRow);
+
+    const token = issueAccessToken({
+      id: userRow.id,
+      email: userRow.email,
+      role: authUser.role,
+      clinicId: userRow.clinic?.id ?? null,
+    });
+
+    return {
+      token,
+      user: authUser,
+      signedInAt: new Date().toISOString(),
+    };
   } catch (e: unknown) {
     if (
       e !== null &&
@@ -147,36 +269,31 @@ export async function registerWithCredentials(
       "code" in e &&
       (e as { code?: unknown }).code === "P2002"
     ) {
+      const meta = (e as { meta?: { target?: unknown } }).meta?.target;
+      const target = Array.isArray(meta) ? meta.join(",") : String(meta ?? "");
+      if (target.includes("slug")) {
+        throw new HttpError(409, "This clinic URL is already taken", "SLUG_IN_USE");
+      }
       throw new HttpError(409, "Email already registered", "EMAIL_IN_USE");
     }
     throw e;
   }
-
-  const role = row.role as AuthUser["role"];
-
-  const token = issueAccessToken({
-    id: row.id,
-    email: row.email,
-    role,
-  });
-
-  return {
-    token,
-    user: { id: row.id, email: row.email, role },
-    signedInAt: new Date().toISOString(),
-  };
 }
 
 /** Load user from DB (preferred for `/me` to reflect role/email updates). */
 export async function findUserById(id: string): Promise<AuthUser | null> {
   const row = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, role: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      clinic: {
+        select: { id: true, name: true, slug: true },
+      },
+    },
   });
   if (!row) return null;
-  return {
-    id: row.id,
-    email: row.email,
-    role: row.role as AuthUser["role"],
-  };
+  return rowToAuthUser(row);
 }

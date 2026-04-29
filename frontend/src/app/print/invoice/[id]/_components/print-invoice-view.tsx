@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { currentClinic, formatCurrency } from "@/lib/dashboard-content";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 
 function formatDate(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {

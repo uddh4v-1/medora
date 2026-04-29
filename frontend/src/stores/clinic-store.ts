@@ -19,8 +19,9 @@ import {
   type Visit,
   visits as seedVisits,
   type VisitStatus,
-} from "./dashboard-content";
-import type { NotificationAudience } from "./notification-segments";
+} from "@/lib/dashboard-content";
+import type { NotificationAudience } from "@/lib/notification-segments";
+import type { ClinicSummary } from "@/services/types/auth.types";
 
 export type Notification = {
   id: string;
@@ -35,6 +36,11 @@ export type Session = {
   email: string;
   role: "Owner" | "Doctor" | "Receptionist";
   signedInAt: string;
+  /** From `/api/auth/*` — used when signed in via the API */
+  userId?: string;
+  name?: string;
+  /** From `AuthUser.clinic` on login, register, and `GET /api/auth/me` */
+  clinic?: ClinicSummary | null;
 };
 
 export type OutreachKind = "visit_reminder" | "festival_offer" | "custom";
@@ -81,6 +87,13 @@ type ClinicState = {
 
   addTeamMember: (m: TeamMember) => void;
   removeTeamMember: (id: string) => void;
+
+  hydrateDashboardData: (payload: {
+    patients: Patient[];
+    visits: Visit[];
+    appointments: Appointment[];
+    invoices: Invoice[];
+  }) => void;
 
   markNotificationsRead: (ids: string[]) => void;
 
@@ -153,6 +166,14 @@ export const useClinicStore = create<ClinicState>()(
           teamMembers: s.teamMembers.filter((m) => m.id !== id),
         })),
 
+      hydrateDashboardData: (payload) =>
+        set(() => ({
+          patients: payload.patients,
+          visits: payload.visits,
+          appointments: payload.appointments,
+          invoices: payload.invoices,
+        })),
+
       markNotificationsRead: (ids) =>
         set((s) => ({
           notificationsRead: Array.from(
@@ -179,7 +200,7 @@ export const useClinicStore = create<ClinicState>()(
     }),
     {
       name: "medora-clinic-store",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       migrate: (persisted, version) => {
         if (persisted === null || typeof persisted !== "object") {

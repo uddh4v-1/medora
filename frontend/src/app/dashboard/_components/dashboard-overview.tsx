@@ -11,12 +11,11 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
-  currentClinic,
-  currentUser,
   type DashboardStat,
 } from "@/lib/dashboard-content";
 import { useI18n } from "@/lib/i18n/provider";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
+import { useDashboardSession } from "../_hooks/use-dashboard-session";
 
 import { ActivityFeed } from "./activity-feed";
 import { AiInsight } from "./ai-insight";
@@ -42,6 +41,7 @@ function formatTodayEyebrow(locale: string) {
 export function DashboardOverview() {
   const { t, bcp47 } = useI18n();
   const hydrated = useHydrated();
+  const { shortName, clinicName } = useDashboardSession();
   const appointments = useClinicStore((s) => s.appointments);
   const visits = useClinicStore((s) => s.visits);
   const invoices = useClinicStore((s) => s.invoices);
@@ -98,8 +98,8 @@ export function DashboardOverview() {
     <div className="flex flex-col gap-5 px-6 py-6 md:px-8">
       <DashboardPageHeader
         eyebrow={eyebrow}
-        title={t("dashboard.hello", { name: currentUser.shortName })}
-        description={t("dashboard.subtitle", { clinic: currentClinic.name })}
+        title={t("dashboard.hello", { name: shortName })}
+        description={t("dashboard.subtitle", { clinic: clinicName })}
         actions={
           <>
             <Button

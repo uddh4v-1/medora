@@ -10,7 +10,7 @@ import {
   digitsForWhatsApp,
   whatsAppUrl,
 } from "@/lib/whatsapp";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
 
 type Props = {

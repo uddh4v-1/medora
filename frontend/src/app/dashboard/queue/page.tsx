@@ -13,7 +13,8 @@ import {
   type Visit,
   type VisitStatus,
 } from "@/lib/dashboard-content";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
+import { patchDashboardQueueStatus } from "@/services/dashboard.service";
 
 import { DashboardPageHeader } from "../_components/page-header";
 import {
@@ -108,6 +109,18 @@ export default function QueuePage() {
     toast.success("Added to queue", { description: input.patient });
   }
 
+  async function handleStatusChange(
+    id: string,
+    status: "in-progress" | "completed",
+  ) {
+    const res = await patchDashboardQueueStatus(id, status);
+    if (!res.ok) {
+      toast.error("Could not update queue status");
+      return;
+    }
+    setVisitStatus(id, status);
+  }
+
   if (!hydrated) {
     return <QueuePageSkeleton />;
   }
@@ -124,14 +137,20 @@ export default function QueuePage() {
         <NowServingPanel
           visit={inProgressVisit}
           nextVisit={nextVisit}
-          onComplete={(id) => setVisitStatus(id, "completed")}
-          onStartNext={(id) => setVisitStatus(id, "in-progress")}
+          onComplete={(id) => {
+            void handleStatusChange(id, "completed");
+          }}
+          onStartNext={(id) => {
+            void handleStatusChange(id, "in-progress");
+          }}
           className="lg:col-span-2"
         />
         <WaitingPanel
           visits={waitingQueue.slice(0, 5)}
           canStart={!inProgressVisit}
-          onStart={(id) => setVisitStatus(id, "in-progress")}
+          onStart={(id) => {
+            void handleStatusChange(id, "in-progress");
+          }}
         />
       </section>
 
@@ -163,8 +182,12 @@ export default function QueuePage() {
             <TabsContent key={value} value={value}>
               <QueueList
                 visits={filtered}
-                onAdvance={(id) => setVisitStatus(id, "in-progress")}
-                onComplete={(id) => setVisitStatus(id, "completed")}
+                onAdvance={(id) => {
+                  void handleStatusChange(id, "in-progress");
+                }}
+                onComplete={(id) => {
+                  void handleStatusChange(id, "completed");
+                }}
               />
             </TabsContent>
           );

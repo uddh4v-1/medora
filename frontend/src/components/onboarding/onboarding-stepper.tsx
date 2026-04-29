@@ -8,7 +8,7 @@ import {
   type OnboardingStep,
   ONBOARDING_STEPS,
   WIZARD_STEPS,
-} from "@/lib/onboarding-store";
+} from "@/stores/onboarding-store";
 
 import { STEP_META } from "./step-config";
 

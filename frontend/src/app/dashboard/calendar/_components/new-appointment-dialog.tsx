@@ -39,7 +39,7 @@ import {
   getAvailableSlots,
   type NewAppointmentInput,
 } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
 
 type Props = {

@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import {
   useOnboardingHydrated,
   useOnboardingStore,
-} from "@/lib/onboarding-store";
+} from "@/stores/onboarding-store";
 
 // `/onboarding` itself is a router — we forward the user to whichever step
 // they last unlocked. Keeps deep-linking from a "resume onboarding" email or

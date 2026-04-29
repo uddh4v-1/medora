@@ -220,6 +220,150 @@
   }
 }
 
+/* Landing: ambient motion (disabled when user prefers reduced motion) */
+@keyframes landing-aurora-drift-a {
+  0%,
+  100% {
+    transform: translate(0%, 0%) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate(4%, -5%) scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes landing-aurora-drift-b {
+  0%,
+  100% {
+    transform: translate(0%, 0%) scale(1.02);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-5%, 4%) scale(1);
+    opacity: 0.95;
+  }
+}
+
+@keyframes landing-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-coral-underline {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes landing-badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand) 45%, transparent);
+  }
+  50% {
+    opacity: 0.92;
+    transform: scale(1.08);
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--brand) 0%, transparent);
+  }
+}
+
+.landing-fade-rise {
+  animation: landing-fade-rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-delay-1 {
+  animation-delay: 90ms;
+}
+
+.landing-delay-2 {
+  animation-delay: 170ms;
+}
+
+.landing-delay-3 {
+  animation-delay: 250ms;
+}
+
+.landing-delay-4 {
+  animation-delay: 330ms;
+}
+
+.landing-delay-5 {
+  animation-delay: 410ms;
+}
+
+.landing-stats-grid > div:nth-child(1) {
+  animation-delay: 380ms;
+}
+
+.landing-stats-grid > div:nth-child(2) {
+  animation-delay: 460ms;
+}
+
+.landing-stats-grid > div:nth-child(3) {
+  animation-delay: 540ms;
+}
+
+.landing-badge-dot {
+  animation: landing-badge-pulse 2.8s ease-in-out infinite;
+}
+
+.landing-coral-accent {
+  position: relative;
+  display: inline-block;
+}
+
+.landing-coral-accent::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.15em;
+  height: 0.22em;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--brand-coral) 65%, transparent),
+    transparent
+  );
+  transform-origin: center left;
+  animation: landing-coral-underline 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-fade-rise,
+  .landing-stats-grid > div,
+  .landing-badge-dot,
+  .landing-coral-accent::after {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .landing-coral-accent::after {
+    transform: scaleX(1);
+    opacity: 0.85;
+  }
+
+  .landing-aurora-glow {
+    animation: none !important;
+  }
+}
+
 @media print {
   @page {
     size: A4;

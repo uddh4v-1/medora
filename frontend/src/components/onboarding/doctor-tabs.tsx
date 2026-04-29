@@ -18,7 +18,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { DoctorService } from "@/lib/onboarding-store";
+import type { DoctorService } from "@/stores/onboarding-store";
 
 import { WorkingHoursGrid } from "./working-hours-grid";
 

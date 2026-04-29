@@ -18,7 +18,7 @@ import {
   WEEK_DAYS,
   type WorkingHours,
   useOnboardingStore,
-} from "@/lib/onboarding-store";
+} from "@/stores/onboarding-store";
 
 function summarizeHours(hours: WorkingHours) {
   const groups: { days: string[]; range: string }[] = [];

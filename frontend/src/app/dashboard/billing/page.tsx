@@ -4,7 +4,7 @@ import {
   type Invoice,
   nextInvoiceNumber,
 } from "@/lib/dashboard-content";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 import { toast } from "sonner";
 
 import { DataListSkeleton } from "@/components/dashboard/data-list-skeleton";

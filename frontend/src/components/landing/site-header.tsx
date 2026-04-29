@@ -8,7 +8,7 @@ import { ThemeToggle } from "./theme-toggle";
 
 export function SiteHeader() {
   return (
-    <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5">
+    <header className="landing-fade-rise relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5">
       <Logo />
 
       <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-9 text-sm text-muted-foreground md:flex">

@@ -24,7 +24,7 @@ import {
   type Invoice,
   lowInventory,
 } from "@/lib/dashboard-content";
-import { type Notification, useClinicStore } from "@/lib/store";
+import { type Notification, useClinicStore } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
 
 function timeStringToMinutes(t: string) {

@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { type Gender, type Patient } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 import { toast } from "sonner";
 
 const fieldClass =

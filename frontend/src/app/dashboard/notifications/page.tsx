@@ -24,8 +24,8 @@ import {
   startOfWeekMonday,
   toIsoDate,
 } from "@/lib/notification-segments";
-import type { OutreachKind } from "@/lib/store";
-import { useClinicStore } from "@/lib/store";
+import type { OutreachKind } from "@/stores/clinic-store";
+import { useClinicStore } from "@/stores/clinic-store";
 import { useI18n } from "@/lib/i18n/provider";
 
 function fmtShort(iso: string, bcp47: string) {

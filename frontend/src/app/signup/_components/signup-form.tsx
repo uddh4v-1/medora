@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { deriveSlug, useOnboardingStore } from "@/lib/onboarding-store";
+import { deriveSlug, useOnboardingStore } from "@/stores/onboarding-store";
+import { useClinicStore } from "@/stores/clinic-store";
+import { postRegister } from "@/services/auth.service";
 
 function passwordStrength(pw: string): 0 | 1 | 2 | 3 {
   if (pw.length < 8) return 0;
@@ -26,6 +28,7 @@ const STRENGTH_LABEL = ["Too short", "Okay", "Good", "Strong"] as const;
 export function SignupForm() {
   const router = useRouter();
   const setSignup = useOnboardingStore((s) => s.setSignup);
+  const signIn = useClinicStore((s) => s.signIn);
 
   const [clinicName, setClinicName] = useState("");
   const [phone, setPhone] = useState("");
@@ -44,26 +47,56 @@ export function SignupForm() {
     ownerName.trim().length >= 2 &&
     /\S+@\S+\.\S+/.test(email) &&
     password.length >= 8 &&
+    slug.length >= 1 &&
     agree;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!valid) return;
     setSubmitting(true);
-    setSignup({
-      clinicName: clinicName.trim(),
-      clinicPhone: phone.trim(),
-      ownerName: ownerName.trim(),
-      ownerEmail: email.trim().toLowerCase(),
-      slug,
-    });
-    // Mimic a quick API round-trip so the spinner registers visually.
-    window.setTimeout(() => {
+    try {
+      const { ok, data } = await postRegister({
+        clinicName,
+        phone,
+        ownerName,
+        email,
+        password,
+        slug,
+        acceptTerms: agree,
+      });
+
+      if (!ok) {
+        toast.error(data.error ?? "Could not create your clinic");
+        return;
+      }
+
+      if (data.user?.email && data.signedInAt) {
+        signIn({
+          email: data.user.email,
+          role: data.user.role,
+          signedInAt: data.signedInAt,
+          userId: data.user.id,
+          name: data.user.name ?? ownerName.trim(),
+          clinic: data.user.clinic ?? null,
+        });
+      }
+
+      setSignup({
+        clinicName: clinicName.trim(),
+        clinicPhone: phone.trim(),
+        ownerName: ownerName.trim(),
+        ownerEmail: email.trim().toLowerCase(),
+        slug,
+      });
       toast.success("Welcome to Medora", {
         description: "Let's verify your email and you're off.",
       });
       router.push("/onboarding/verify-email");
-    }, 500);
+    } catch {
+      toast.error("Network error — try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

@@ -7,7 +7,7 @@ import {
   UserPlus,
 } from "lucide-react";
 
-import type { OnboardingStep } from "@/lib/onboarding-store";
+import type { OnboardingStep } from "@/stores/onboarding-store";
 
 export type StepMeta = {
   step: OnboardingStep;

@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/command";
 import { currentClinic, dashboardNav } from "@/lib/dashboard-content";
 import { useI18n } from "@/lib/i18n/provider";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 
 const navIconMap: Record<
   string,

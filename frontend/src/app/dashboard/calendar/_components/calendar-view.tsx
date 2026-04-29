@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { type NewAppointmentInput } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 
 import { DashboardPageHeader } from "../../_components/page-header";
 import { DateStepper } from "./date-stepper";

@@ -17,7 +17,7 @@ import {
   appointmentStatuses,
   format12h,
 } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
 
 const surfaceStyles: Record<AppointmentStatus, string> = {

@@ -1,6 +1,13 @@
 "use client";
 
 import {
+  addMonths,
+  format,
+  isAfter,
+  isBefore,
+  startOfDay,
+} from "date-fns";
+import {
   CalendarDays,
   Check,
   ChevronRight,
@@ -23,7 +30,7 @@ import {
   format12h,
   type Patient,
 } from "@/lib/dashboard-content";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -42,6 +49,127 @@ function prettyDate(date: Date) {
     month: "long",
     day: "numeric",
   });
+}
+
+/** Inline calendar card — full visibility on mobile/desktop (no cramped popover). */
+function BookingCalendarCard({
+  date,
+  bookingWindow,
+  onSelect,
+}: {
+  date: Date | undefined;
+  bookingWindow: { today: Date; latest: Date };
+  onSelect: (d: Date | undefined) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+        Pick any open day—you can reserve slots within the next four months
+        {" "}(including today).
+      </p>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card-soft ring-1 ring-foreground/[0.04] dark:ring-white/10">
+        <div className="border-b border-border/70 bg-gradient-to-br from-brand/[0.12] via-brand/[0.06] to-transparent px-5 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand text-brand-foreground shadow-brand">
+              <CalendarDays className="size-[1.35rem]" strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-heading text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+                Appointment date
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-[13px]">
+                Use ← → beside the month to browse. Dates before today aren’t
+                available.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative bg-muted/25 px-2 pb-8 pt-6 sm:px-4">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(ellipse_at_50%_0%,color-mix(in_oklab,var(--brand)_12%,transparent)_0%,transparent_65%)]"
+          />
+          <div
+            className={cn(
+              "relative mx-auto w-full max-w-[min(22rem,100%)] rounded-2xl border border-border/90 bg-background/95 p-1 shadow-[inset_0_1px_0_0_color-mix(in_oklab,var(--foreground)_6%,transparent)] backdrop-blur-sm dark:bg-card/95",
+              "[&_button[data-selected-single]]:!border-brand/40 [&_button[data-selected-single]]:!bg-brand [&_button[data-selected-single]]:!text-brand-foreground [&_button[data-selected-single]]:!shadow-md [&_button[data-selected-single]]:shadow-brand/30",
+              "[&_button:hover]:z-10 [&_button:not([data-selected-single])]:hover:bg-brand/8",
+            )}
+          >
+            <Calendar
+              mode="single"
+              selected={date}
+              captionLayout="label"
+              navLayout="around"
+              defaultMonth={date ?? bookingWindow.today}
+              startMonth={bookingWindow.today}
+              endMonth={bookingWindow.latest}
+              fromYear={bookingWindow.today.getFullYear()}
+              toYear={bookingWindow.latest.getFullYear()}
+              fromDate={bookingWindow.today}
+              toDate={bookingWindow.latest}
+              weekStartsOn={1}
+              showOutsideDays
+              onSelect={onSelect}
+              disabled={(d) => {
+                const day = startOfDay(d);
+                return (
+                  isBefore(day, bookingWindow.today) ||
+                  isAfter(day, bookingWindow.latest)
+                );
+              }}
+              className="w-full bg-transparent p-3 [--cell-size:2.75rem]"
+              buttonVariant="outline"
+              classNames={{
+                /** With navLayout="around": [prev][caption][next] — avoid flex-col + caption w-full (huge gaps). */
+                month: cn(
+                  "!flex w-full max-w-none flex-row flex-wrap items-center justify-center gap-x-1.5 gap-y-5 !px-0 [&>[role=grid]]:mt-1 [&>[role=grid]]:w-full [&>[role=grid]]:basis-full",
+                ),
+                month_caption: cn(
+                  "!h-auto !min-h-0 !w-fit shrink-0 grow-0 justify-center border-0 !px-1 !py-0 [--cell-size:2.75rem]",
+                ),
+                caption_label:
+                  "text-[0.9375rem] font-semibold tracking-tight text-foreground sm:text-[1rem]",
+                button_previous:
+                  "!static shrink-0 shadow-none [--cell-size:2.5rem]",
+                button_next:
+                  "!static shrink-0 shadow-none [--cell-size:2.5rem]",
+              }}
+            />
+          </div>
+        </div>
+
+        <footer className="border-t border-border/70 bg-muted/20 px-5 py-3.5 sm:px-6">
+          {date ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-sm text-foreground">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground">
+                  <Check className="size-3.5" strokeWidth={2.5} />
+                </span>
+                <span>
+                  <span className="font-medium">{format(date, "EEEE")}</span>
+                  <span className="text-muted-foreground"> · </span>
+                  <span className="font-medium tabular-nums">
+                    {format(date, "MMMM d, yyyy")}
+                  </span>
+                </span>
+              </p>
+              <span className="rounded-md bg-background/90 px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground ring-1 ring-border/70">
+                Through {format(bookingWindow.latest, "MMM d, yyyy")}
+              </span>
+            </div>
+          ) : (
+            <p className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground sm:text-sm">
+              <span className="inline-block size-1.5 animate-pulse rounded-full bg-brand/70" aria-hidden />
+              Select a date to unlock time slots
+            </p>
+          )}
+        </footer>
+      </div>
+    </div>
+  );
 }
 
 export function PublicBookingFlow() {
@@ -95,6 +223,12 @@ export function PublicBookingFlow() {
       });
     return taken;
   }, [appointments, selectedDoctor]);
+
+  const bookingWindow = useMemo(() => {
+    const today = startOfDay(new Date());
+    const latest = startOfDay(addMonths(new Date(), 4));
+    return { today, latest };
+  }, []);
 
   const grouped = useMemo(() => {
     const morning: string[] = [];
@@ -286,21 +420,14 @@ export function PublicBookingFlow() {
                   active={step === 2}
                   done={step > 2}
                 >
-                  <div className="flex justify-center rounded-xl border border-border bg-card p-3">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={(d) => {
-                        setDate(d);
-                        setSlot(null);
-                      }}
-                      disabled={(d) => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        return d < today;
-                      }}
-                    />
-                  </div>
+                  <BookingCalendarCard
+                    date={date}
+                    bookingWindow={bookingWindow}
+                    onSelect={(d) => {
+                      setDate(d);
+                      setSlot(null);
+                    }}
+                  />
                 </Section>
               ) : null}
 

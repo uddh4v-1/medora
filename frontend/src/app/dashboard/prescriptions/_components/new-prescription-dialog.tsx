@@ -26,7 +26,7 @@ import {
   frequencyOptions,
   type Medication,
 } from "@/lib/dashboard-content";
-import { useClinicStore } from "@/lib/store";
+import { useClinicStore } from "@/stores/clinic-store";
 
 const fieldClass =
   "h-10 rounded-lg border-border bg-card text-sm focus-visible:ring-brand/40";

@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { Invitee } from "@/lib/onboarding-store";
+import type { Invitee } from "@/stores/onboarding-store";
 
 type Props = {
   value: Invitee;

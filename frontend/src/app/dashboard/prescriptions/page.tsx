@@ -10,7 +10,7 @@ import {
   nextPrescriptionNumber,
   type Prescription,
 } from "@/lib/dashboard-content";
-import { useClinicStore, useHydrated } from "@/lib/store";
+import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 
 import { DashboardPageHeader } from "../_components/page-header";
 import {

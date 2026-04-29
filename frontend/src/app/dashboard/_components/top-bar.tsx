@@ -14,13 +14,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  currentClinic,
-  currentUser,
   dashboardNav,
 } from "@/lib/dashboard-content";
 import { siteConfig } from "@/lib/site-content";
 import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
+
+import { useDashboardSession } from "../_hooks/use-dashboard-session";
 
 import { CommandPalette } from "./command-palette";
 import { NotificationsBell } from "./notifications-bell";
@@ -29,6 +29,13 @@ export function DashboardTopBar() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const {
+    clinicName,
+    displayName,
+    initials,
+    roleLabel,
+    session,
+  } = useDashboardSession();
 
   useEffect(() => {
     setOpen(false);
@@ -63,7 +70,7 @@ export function DashboardTopBar() {
                   {siteConfig.name}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  {currentClinic.name}
+                  {clinicName}
                 </span>
               </div>
             </div>
@@ -96,14 +103,14 @@ export function DashboardTopBar() {
 
             <div className="flex items-center gap-2.5 border-t border-sidebar-border px-4 py-3">
               <span className="flex size-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">
-                {currentUser.initials}
+                {initials}
               </span>
               <div className="flex flex-1 flex-col leading-tight">
                 <span className="text-[13px] font-medium text-sidebar-foreground">
-                  {currentUser.name}
+                  {displayName}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  {currentUser.role}
+                  {session?.email ?? roleLabel}
                 </span>
               </div>
               <SheetClose asChild>
