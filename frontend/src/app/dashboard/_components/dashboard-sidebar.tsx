@@ -4,6 +4,8 @@ import { Link2, LogOut, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { LocationSwitcher } from "@/components/dashboard/location-switcher";
+
 import { Button } from "@/components/ui/button";
 import { dashboardNav } from "@/lib/dashboard-content";
 import { siteConfig } from "@/lib/site-content";
@@ -22,6 +24,7 @@ export function DashboardSidebar() {
     session,
     clinicName,
     clinicSlug,
+    clinicId,
     displayName,
     roleLabel,
     initials,
@@ -41,7 +44,7 @@ export function DashboardSidebar() {
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar md:flex md:flex-col">
-      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
+      <div className="flex items-center gap-2.5 px-5 pt-5 pb-3">
         <span className="flex size-9 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-brand">
           <Stethoscope className="size-4.5" />
         </span>
@@ -51,6 +54,9 @@ export function DashboardSidebar() {
           </span>
           <span className="text-[11px] text-muted-foreground">{clinicName}</span>
         </div>
+      </div>
+      <div className="px-3 pb-2">
+        <LocationSwitcher currentClinicId={clinicId} />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3 pb-4">

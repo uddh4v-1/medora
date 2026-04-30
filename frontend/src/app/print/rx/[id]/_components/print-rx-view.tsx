@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { currentClinic } from "@/lib/dashboard-content";
 import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 
 function formatDate(iso: string) {
@@ -36,8 +35,16 @@ export function PrintRxView({ id }: { id: string }) {
   const patient = useClinicStore((s) =>
     rx ? s.patients.find((p) => p.name === rx.patient) : undefined,
   );
+  const clinicProfile = useClinicStore((s) => s.clinicProfile);
+  const session = useClinicStore((s) => s.session);
   const printRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+
+  const clinicName = clinicProfile?.name ?? session?.clinic?.name ?? "Clinic";
+  const clinicPhone = clinicProfile?.phone ?? "";
+  const clinicAddress = [clinicProfile?.address, clinicProfile?.city].filter(Boolean).join(", ");
+  const logoUrl = clinicProfile?.logoUrl ?? null;
+  const brandColor = clinicProfile?.brandColor ?? "#2d5843";
 
   async function handleDownload() {
     if (!printRef.current || !rx) return;
@@ -112,21 +119,29 @@ export function PrintRxView({ id }: { id: string }) {
       >
         <header className="flex items-start justify-between gap-6 border-b border-border pb-4">
           <div className="flex items-start gap-3">
-            <span className="flex size-12 items-center justify-center rounded-xl bg-brand text-brand-foreground">
-              <Stethoscope className="size-6" />
-            </span>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={clinicName}
+                className="size-12 rounded-xl object-contain"
+                style={{ background: brandColor + "1a" }}
+              />
+            ) : (
+              <span
+                className="flex size-12 items-center justify-center rounded-xl text-white"
+                style={{ backgroundColor: brandColor }}
+              >
+                <Stethoscope className="size-6" />
+              </span>
+            )}
             <div>
               <h1 className="text-xl font-bold tracking-tight">
-                {currentClinic.name}
+                {clinicName}
               </h1>
               <p className="text-xs text-muted-foreground">
-                {currentClinic.address} · {currentClinic.phone}
+                {[clinicAddress, clinicPhone].filter(Boolean).join(" · ")}
               </p>
-              {currentClinic.gst ? (
-                <p className="text-xs text-muted-foreground">
-                  GSTIN: {currentClinic.gst}
-                </p>
-              ) : null}
             </div>
           </div>
           <div className="text-right">

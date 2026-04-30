@@ -32,6 +32,7 @@ export function getOpenApiSpec(): Record<string, unknown> {
       { name: "Team", description: "Clinic team members (Owner-managed)" },
       { name: "Clinic", description: "Clinic settings and profile" },
       { name: "Audit", description: "Audit log (SuperAdmin view)" },
+      { name: "Notifications", description: "Clinic-level broadcast send and history" },
       { name: "SuperAdmin", description: "Platform-level admin operations — clinics, users, billing" },
       { name: "SuperAdmin · Analytics", description: "Financial dashboard, health scores, system health, API usage" },
       { name: "SuperAdmin · Tickets", description: "Support ticket system with threaded replies" },
@@ -41,6 +42,8 @@ export function getOpenApiSpec(): Record<string, unknown> {
       { name: "SuperAdmin · GDPR", description: "Deletion requests and per-clinic data export" },
       { name: "SuperAdmin · Plans", description: "Custom billing plan builder" },
       { name: "SuperAdmin · Export", description: "CSV and JSON data exports" },
+      { name: "Discover", description: "Public clinic search and patient-facing booking (no auth)" },
+      { name: "Clinic · Locations", description: "Multi-location management — list, create, and switch between branches (Owner only)" },
     ],
     paths: {
       // ── Meta ──────────────────────────────────────────────────────────────
@@ -477,6 +480,161 @@ export function getOpenApiSpec(): Record<string, unknown> {
         },
       },
 
+      // ── Discover (public) ────────────────────────────────────────────────────
+      "/api/discover/clinics": {
+        get: {
+          tags: ["Discover"],
+          summary: "Search clinics (public)",
+          description:
+            "Returns active clinics with `publicBooking` enabled. **Text search**: filter by `name`, `city`, `pincode`, `specialty`. **Geo search**: provide `lat`/`lng` (and optionally `radiusKm`, default 10) to get results sorted by distance — only clinics with geocoded coordinates appear.",
+          parameters: [
+            { name: "name", in: "query", schema: { type: "string" }, description: "Partial, case-insensitive clinic name match" },
+            { name: "city", in: "query", schema: { type: "string" }, description: "Partial, case-insensitive city match" },
+            { name: "pincode", in: "query", schema: { type: "string" }, description: "Partial pincode match" },
+            { name: "specialty", in: "query", schema: { type: "string" }, description: "Exact specialty string match against the specialties array" },
+            { name: "lat", in: "query", schema: { type: "number" }, description: "Latitude for geo-search (requires lng)" },
+            { name: "lng", in: "query", schema: { type: "number" }, description: "Longitude for geo-search (requires lat)" },
+            { name: "radiusKm", in: "query", schema: { type: "number", default: 10 }, description: "Search radius in km (geo-search only)" },
+          ],
+          responses: {
+            "200": {
+              description: "Clinic list",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      clinics: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            id: { type: "string" },
+                            name: { type: "string" },
+                            slug: { type: "string" },
+                            phone: { type: "string" },
+                            address: { type: "string", nullable: true },
+                            city: { type: "string", nullable: true },
+                            state: { type: "string", nullable: true },
+                            pincode: { type: "string", nullable: true },
+                            specialties: { type: "array", items: { type: "string" } },
+                            description: { type: "string", nullable: true },
+                            doctorCount: { type: "integer" },
+                            distanceKm: { type: "number", nullable: true, description: "Only present in geo-search results" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/discover/clinics/{slug}": {
+        get: {
+          tags: ["Discover"],
+          summary: "Get clinic by slug (public)",
+          description: "Returns a single active clinic with its active doctors. Used by the public booking page.",
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": {
+              description: "Clinic detail with doctor list",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      clinic: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          name: { type: "string" },
+                          slug: { type: "string" },
+                          phone: { type: "string" },
+                          address: { type: "string", nullable: true },
+                          city: { type: "string", nullable: true },
+                          specialties: { type: "array", items: { type: "string" } },
+                          description: { type: "string", nullable: true },
+                          doctors: {
+                            type: "array",
+                            items: { type: "object", properties: { id: { type: "string" }, name: { type: "string" } } },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "404": { description: "Clinic not found or not active" },
+          },
+        },
+      },
+      "/api/discover/clinics/{slug}/appointments": {
+        post: {
+          tags: ["Discover"],
+          summary: "Create public booking",
+          description:
+            "Submits an appointment without authentication. Looks up the patient by `(clinicId, phone)`; creates a new `Patient` row if not found. Rejects if the clinic is not active or `publicBooking` is disabled.",
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "phone", "date", "startTime", "endTime"],
+                  properties: {
+                    name: { type: "string", maxLength: 200 },
+                    phone: { type: "string", maxLength: 24 },
+                    reason: { type: "string", maxLength: 500 },
+                    doctorId: { type: "string", nullable: true },
+                    date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD" },
+                    startTime: { type: "string", pattern: "^\\d{2}:\\d{2}$", description: "HH:MM (30-min slots 00:00–23:30)" },
+                    endTime: { type: "string", pattern: "^\\d{2}:\\d{2}$" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Appointment created",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      appointment: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          patientName: { type: "string" },
+                          doctorName: { type: "string", nullable: true },
+                          date: { type: "string", format: "date" },
+                          startTime: { type: "string" },
+                          endTime: { type: "string" },
+                          reason: { type: "string", nullable: true },
+                          status: { type: "string", example: "scheduled" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": { description: "Validation error" },
+            "404": { description: "Clinic not found or public booking disabled" },
+          },
+        },
+      },
+
       // ── Patients ──────────────────────────────────────────────────────────
       "/api/patients": {
         post: {
@@ -862,20 +1020,288 @@ export function getOpenApiSpec(): Record<string, unknown> {
                 schema: {
                   type: "object",
                   properties: {
-                    name: { type: "string", minLength: 2 },
+                    name: { type: "string", minLength: 2, maxLength: 200 },
                     phone: { type: "string" },
-                    address: { type: "string" },
-                    logoUrl: { type: "string", format: "uri" },
+                    address: { type: "string", maxLength: 500 },
+                    city: { type: "string", maxLength: 100 },
+                    state: { type: "string", maxLength: 100 },
+                    pincode: { type: "string", maxLength: 20 },
+                    specialties: { type: "array", items: { type: "string", maxLength: 80 }, maxItems: 20 },
+                    description: { type: "string", maxLength: 1000 },
+                    logoUrl: { type: "string", maxLength: 2000, nullable: true },
+                    brandColor: { type: "string", maxLength: 20, nullable: true, description: "Hex color code, e.g. #1a73e8" },
                   },
                 },
               },
             },
           },
           responses: {
-            "200": { description: "Clinic updated" },
+            "200": {
+              description: "Clinic updated",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      id: { type: "string" },
+                      name: { type: "string" },
+                      slug: { type: "string" },
+                      phone: { type: "string" },
+                      address: { type: "string", nullable: true },
+                      city: { type: "string", nullable: true },
+                      state: { type: "string", nullable: true },
+                      pincode: { type: "string", nullable: true },
+                      specialties: { type: "array", items: { type: "string" } },
+                      description: { type: "string", nullable: true },
+                      logoUrl: { type: "string", nullable: true },
+                      brandColor: { type: "string", nullable: true },
+                      createdAt: { type: "string", format: "date-time" },
+                    },
+                  },
+                },
+              },
+            },
             "400": { description: "Validation error" },
             "401": { description: "Not authenticated" },
             "403": { description: "Owner role required" },
+          },
+        },
+      },
+
+      // ── Clinic · Data Export ──────────────────────────────────────────────
+      "/api/clinic/export": {
+        get: {
+          tags: ["Clinic"],
+          summary: "Export clinic data as CSV (Owner only)",
+          description: "Streams a CSV download for the current clinic. Supported types: `patients`, `appointments`, `prescriptions`, `invoices`.",
+          security: sessionSecurity,
+          parameters: [
+            {
+              name: "type",
+              in: "query",
+              required: true,
+              schema: { type: "string", enum: ["patients", "appointments", "prescriptions", "invoices"] },
+              description: "Data type to export",
+            },
+          ],
+          responses: {
+            "200": { description: "CSV file download", content: { "text/csv": { schema: { type: "string", format: "binary" } } } },
+            "400": { description: "Invalid or missing type parameter" },
+            "401": { description: "Not authenticated" },
+            "403": { description: "Owner role required" },
+          },
+        },
+      },
+
+      // ── Clinic · Locations ────────────────────────────────────────────────
+      "/api/clinic/locations": {
+        get: {
+          tags: ["Clinic · Locations"],
+          summary: "List clinic locations (group)",
+          description: "Returns the root clinic and all branches that share the same group.",
+          security: sessionSecurity,
+          responses: {
+            "200": {
+              description: "Locations in the group",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      locations: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            id: { type: "string" },
+                            name: { type: "string" },
+                            slug: { type: "string" },
+                            phone: { type: "string" },
+                            city: { type: "string", nullable: true },
+                            address: { type: "string", nullable: true },
+                            parentClinicId: { type: "string", nullable: true, description: "null for root clinic" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "401": { description: "Not authenticated" },
+            "403": { description: "Owner role required" },
+          },
+        },
+        post: {
+          tags: ["Clinic · Locations"],
+          summary: "Create branch clinic (Owner only)",
+          description: "Creates a new branch under the current clinic's root group. The branch gets its own slug and data scope.",
+          security: sessionSecurity,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "phone", "slug"],
+                  properties: {
+                    name: { type: "string", minLength: 2, maxLength: 200 },
+                    phone: { type: "string" },
+                    slug: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 60, description: "URL-safe clinic slug (lowercase letters, numbers, hyphens)" },
+                    address: { type: "string", maxLength: 500 },
+                    city: { type: "string", maxLength: 100 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Branch created",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      branch: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          name: { type: "string" },
+                          slug: { type: "string" },
+                          phone: { type: "string" },
+                          city: { type: "string", nullable: true },
+                          address: { type: "string", nullable: true },
+                          parentClinicId: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": { description: "Validation error" },
+            "401": { description: "Not authenticated" },
+            "403": { description: "Owner role required" },
+            "409": { description: "Slug already taken" },
+          },
+        },
+      },
+      "/api/clinic/locations/switch": {
+        post: {
+          tags: ["Clinic · Locations"],
+          summary: "Switch active location",
+          description: "Issues a new session JWT scoped to `targetClinicId` (must be in the same group as the current user's clinic). Replaces the current session cookie.",
+          security: sessionSecurity,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["targetClinicId"],
+                  properties: {
+                    targetClinicId: { type: "string", description: "ID of the branch or root clinic to switch to" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Session cookie updated; returns new active clinic",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      clinic: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          name: { type: "string" },
+                          slug: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": { description: "Missing or invalid targetClinicId" },
+            "401": { description: "Not authenticated" },
+            "403": { description: "Target clinic not in the same group" },
+          },
+        },
+      },
+
+      // ── Notifications ─────────────────────────────────────────────────────
+      "/api/notifications/broadcast": {
+        post: {
+          tags: ["Notifications"],
+          summary: "Save a sent broadcast",
+          description: "Persists a broadcast record after the clinic sends a WhatsApp-style bulk message. Does not send the message itself.",
+          security: sessionSecurity,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["audience", "kind", "title", "body", "recipientCount"],
+                  properties: {
+                    audience: { type: "string", description: "Segment label, e.g. 'this-week', 'upcoming-visit', 'all'" },
+                    kind: { type: "string", description: "Message kind, e.g. 'whatsapp'" },
+                    title: { type: "string" },
+                    body: { type: "string" },
+                    recipientCount: { type: "integer", minimum: 0 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": { description: "Broadcast record saved" },
+            "400": { description: "Validation error" },
+            "401": { description: "Not authenticated" },
+          },
+        },
+      },
+      "/api/notifications/broadcasts": {
+        get: {
+          tags: ["Notifications"],
+          summary: "List broadcast history",
+          description: "Returns all broadcast records for the current clinic, ordered most-recent first.",
+          security: sessionSecurity,
+          responses: {
+            "200": {
+              description: "Broadcast history list",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      broadcasts: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            id: { type: "string" },
+                            audience: { type: "string" },
+                            kind: { type: "string" },
+                            title: { type: "string" },
+                            body: { type: "string" },
+                            recipientCount: { type: "integer" },
+                            sentAt: { type: "string", format: "date-time" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "401": { description: "Not authenticated" },
           },
         },
       },

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -20,6 +20,7 @@ export function LoginForm() {
     rememberMe,
     setRememberMe,
     isSubmitting,
+    maintenanceWarning,
     onSubmit,
   } = useLoginForm();
 
@@ -44,6 +45,13 @@ export function LoginForm() {
             {t("auth.welcomeBackShort")}
           </p>
         </header>
+
+        {maintenanceWarning && (
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <span>{maintenanceWarning}</span>
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
           {/* Email */}

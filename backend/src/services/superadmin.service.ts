@@ -1284,23 +1284,61 @@ export async function getApiUsage(query: { page: number; limit: number; search?:
 
 // ── Custom Plan Builder ───────────────────────────────────────────────────────
 
+function serializePlan(p: { createdAt: Date; updatedAt: Date; [k: string]: unknown }) {
+  return { ...p, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() };
+}
+
 export async function listCustomPlans() {
-  const plans = await prisma.customPlan.findMany({ orderBy: { createdAt: "desc" } });
-  return plans.map((p) => ({ ...p, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() }));
+  const plans = await prisma.customPlan.findMany({ orderBy: { sortOrder: "asc" } });
+  return plans.map(serializePlan);
 }
 
-export async function createCustomPlan(body: { name: string; description?: string; price: number; maxPatients?: number; maxUsers?: number; features: Record<string, boolean> }) {
-  const plan = await prisma.customPlan.create({
-    data: { name: body.name, description: body.description ?? null, price: body.price, maxPatients: body.maxPatients ?? null, maxUsers: body.maxUsers ?? null, features: body.features },
+export async function getPublicPlans() {
+  const plans = await prisma.customPlan.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
   });
-  return { ...plan, createdAt: plan.createdAt.toISOString(), updatedAt: plan.updatedAt.toISOString() };
+  return plans.map(serializePlan);
 }
 
-export async function updateCustomPlan(planId: string, body: Partial<{ name: string; description: string; price: number; maxPatients: number; maxUsers: number; features: Record<string, boolean>; isActive: boolean }>) {
+type PlanBody = {
+  name: string;
+  description?: string;
+  price: number;
+  annualPrice?: number;
+  maxPatients?: number;
+  maxUsers?: number;
+  features: Record<string, boolean>;
+  displayFeatures?: string[];
+  highlighted?: boolean;
+  ctaText?: string;
+  sortOrder?: number;
+};
+
+export async function createCustomPlan(body: PlanBody) {
+  const plan = await prisma.customPlan.create({
+    data: {
+      name: body.name,
+      description: body.description ?? null,
+      price: body.price,
+      annualPrice: body.annualPrice ?? null,
+      maxPatients: body.maxPatients ?? null,
+      maxUsers: body.maxUsers ?? null,
+      features: body.features,
+      displayFeatures: body.displayFeatures ?? [],
+      highlighted: body.highlighted ?? false,
+      ctaText: body.ctaText ?? null,
+      sortOrder: body.sortOrder ?? 0,
+    },
+  });
+  return serializePlan(plan);
+}
+
+export async function updateCustomPlan(planId: string, body: Partial<PlanBody & { isActive: boolean }>) {
   const plan = await prisma.customPlan.findUnique({ where: { id: planId } });
   if (!plan) throw new HttpError(404, "Plan not found", "NOT_FOUND");
   const updated = await prisma.customPlan.update({ where: { id: planId }, data: body });
-  return { ...updated, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() };
+  return serializePlan(updated);
 }
 
 export async function deleteCustomPlan(planId: string) {

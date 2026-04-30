@@ -7,6 +7,7 @@ import {
   patchQueueStatus,
   getInvoices,
   getRevenueSummary,
+  getReportsOverview,
 } from "@/controllers/dashboard.controller";
 
 export const dashboardRouter = Router();
@@ -17,3 +18,4 @@ dashboardRouter.get("/queue", asyncHandler(getQueue));
 dashboardRouter.patch("/queue/:visitId/status", asyncHandler(patchQueueStatus));
 dashboardRouter.get("/invoices", asyncHandler(getInvoices));
 dashboardRouter.get("/revenue/summary", asyncHandler(getRevenueSummary));
+dashboardRouter.get("/reports", asyncHandler(getReportsOverview));

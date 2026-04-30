@@ -140,6 +140,11 @@ erDiagram
         string pincode
         string[] specialties
         string description
+        string logoUrl
+        string brandColor
+        float latitude
+        float longitude
+        string parentClinicId FK
         datetime createdAt
         datetime updatedAt
     }
@@ -326,6 +331,7 @@ erDiagram
     Clinic ||--o{ Appointment : "has appointments"
     Clinic ||--o{ Prescription : "has prescriptions"
     Clinic ||--o{ Invoice : "has invoices"
+    Clinic ||--o{ Clinic : "has branches"
     Clinic ||--|| ClinicFeatureFlags : "has flags"
     Clinic ||--|| ClinicSubscription : "has subscription"
     Clinic ||--o{ Broadcast : "has broadcasts"
@@ -469,6 +475,7 @@ medora/
 │       ├── lib/
 │       │   ├── prisma.ts          # Prisma client singleton
 │       │   ├── auth-cookie.ts     # Cookie helpers
+│       │   ├── clinic-locations.ts # Multi-location helpers (resolveRootClinicId, getGroupClinics)
 │       │   ├── password-reset-email.ts
 │       │   ├── verify-email.ts
 │       │   └── email-templates/   # HTML email templates
@@ -479,6 +486,7 @@ medora/
 │       ├── utils/
 │       │   ├── http-error.ts      # Custom error class
 │       │   ├── async-handler.ts   # Wraps async controllers
+│       │   ├── geocode.ts         # Address → lat/lng (background geocoding after clinic update)
 │       │   └── phone.ts           # Phone normalisation
 │       └── scripts/
 │           └── create-superadmin.ts
@@ -690,9 +698,33 @@ A SuperAdmin can view any clinic as an Owner without knowing the clinic's passwo
 
 Patients find clinics via `GET /api/discover/clinics` — a public, unauthenticated endpoint. It returns only clinics whose status is `active` and whose `publicBooking` feature flag is enabled.
 
-Query parameters: `city` (case-insensitive partial match), `pincode` (partial match), `specialty` (exact array match against `specialties`). Results include doctor count and link to the clinic's `/book/[slug]` page.
+**Text search** parameters: `name` (partial match), `city`, `pincode`, `specialty` (exact array match against `specialties`).
+
+**Geo search** parameters: `lat`, `lng`, `radiusKm` (default 10). When `lat`/`lng` are provided the endpoint runs a raw Haversine SQL query and returns results sorted by `distanceKm` ascending, limited to 30 results. Clinics must have been geocoded (have `latitude`/`longitude` set) to appear in geo results.
+
+Geocoding runs automatically in the background whenever a clinic's address fields are updated via `PATCH /api/clinic`. Results include `doctorCount` and, for geo results, `distanceKm`.
 
 Clinics populate their discovery profile during onboarding (profile step) and can update it anytime in **Settings → Profile** (city, state, pincode, specialties, description are all API-backed and stored in the `clinics` table).
+
+### Multi-location
+
+A **clinic group** consists of a root clinic and any number of branches. Branches share the same group but each has its own slug, phone, patients, visits, and data — there is no cross-branch data sharing.
+
+- `GET /api/clinic/locations` — returns all locations in the group (root + branches).
+- `POST /api/clinic/locations` — creates a new branch under the current clinic's root. Requires `name`, `slug`, `phone` and optionally `address`/`city`.
+- `POST /api/clinic/locations/switch` — issues a fresh session JWT scoped to `targetClinicId` (must be in the same group) so the Owner's browser session switches to that branch.
+
+`parentClinicId` on a branch row points to the root clinic. `clinic-locations.ts` provides `resolveRootClinicId()` (walk one level up) and `getGroupClinics()` (root + all branches).
+
+### Clinic data export
+
+Owners can export their own clinic data as CSV without involving SuperAdmin:
+
+`GET /api/clinic/export?type=<type>` (Owner only) — streams a CSV download. Supported types:
+- `patients` — all patients with contact info
+- `appointments` — all appointments with patient + doctor names
+- `prescriptions` — all prescriptions with line items
+- `invoices` — all invoices with line items, totals, discount, GST
 
 ### Public booking
 
@@ -743,7 +775,7 @@ Full interactive docs at `/api/docs` (Scalar).
 | `GET /api/health` | No | DB connectivity check |
 | `POST /api/auth/*` | Mostly no | Register, login, logout, password reset, email verification |
 | `GET /api/auth/me` | Yes | Current user |
-| `GET /api/discover/clinics` | No | Public clinic search — filter by `city`, `pincode`, `specialty` |
+| `GET /api/discover/clinics` | No | Public clinic search — filter by `name`, `city`, `pincode`, `specialty`; or geo-search via `lat`/`lng`/`radiusKm` |
 | `GET /api/discover/clinics/:slug` | No | Fetch a single active clinic by slug (includes doctor list) |
 | `POST /api/discover/clinics/:slug/appointments` | No | Submit a public booking (creates patient if new, then appointment) |
 | `GET/PATCH /api/dashboard/*` | Yes | Overview, queue, revenue |
@@ -753,7 +785,11 @@ Full interactive docs at `/api/docs` (Scalar).
 | `GET/POST /api/prescriptions/*` | Yes | Prescription CRUD |
 | `POST/PATCH /api/invoices/*` | Yes | Invoice CRUD |
 | `GET/POST/DELETE /api/team/*` | Yes (Owner for write) | Team members |
-| `GET/PATCH /api/clinic` | Yes (Owner for write) | Clinic profile (includes location + specialties) |
+| `GET/PATCH /api/clinic` | Yes (Owner for write) | Clinic profile (name, phone, address, city, state, pincode, specialties, description, logoUrl, brandColor) |
+| `GET /api/clinic/export` | Yes (Owner) | Export clinic data as CSV — `?type=patients\|appointments\|prescriptions\|invoices` |
+| `GET /api/clinic/locations` | Yes (Owner) | List all locations in the clinic group (root + branches) |
+| `POST /api/clinic/locations` | Yes (Owner) | Create a new branch clinic (name, slug, phone, address?, city?) |
+| `POST /api/clinic/locations/switch` | Yes (Owner) | Switch active session to a different branch (reissues JWT cookie) |
 | `POST /api/audit/event` | Yes | Client-side event log |
 | `GET /api/audit/logs` | Yes (SuperAdmin) | Query audit logs |
 | `GET /api/audit/stats` | Yes (SuperAdmin) | Audit stats |

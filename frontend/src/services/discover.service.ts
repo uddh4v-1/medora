@@ -14,6 +14,7 @@ export type ClinicCard = {
   specialties: string[];
   description: string | null;
   doctorCount: number;
+  distanceKm?: number;
 };
 
 export type PublicClinic = {
@@ -52,9 +53,13 @@ export type PublicAppointmentResult = {
 };
 
 export async function searchClinics(params: {
+  name?: string;
   city?: string;
   pincode?: string;
   specialty?: string;
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
 }): Promise<ClinicCard[]> {
   const { data } = await axios.get<{ clinics: ClinicCard[] }>(
     `${API_URL}/api/discover/clinics`,

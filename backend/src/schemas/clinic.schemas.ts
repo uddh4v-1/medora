@@ -9,5 +9,7 @@ export const updateClinicBodySchema = z.object({
   pincode:     z.string().trim().max(20).optional(),
   specialties: z.array(z.string().trim().max(80)).max(20).optional(),
   description: z.string().trim().max(1000).optional(),
+  logoUrl:     z.string().max(2000).optional().nullable(),
+  brandColor:  z.string().max(20).optional().nullable(),
 });
 export type UpdateClinicBody = z.infer<typeof updateClinicBodySchema>;

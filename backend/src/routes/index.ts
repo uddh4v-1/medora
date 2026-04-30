@@ -16,6 +16,7 @@ import { auditRouter } from "./audit.routes";
 import { superadminRouter } from "./superadmin.routes";
 import { discoverRouter } from "./discover.routes";
 import { notificationsRouter } from "./notifications.routes";
+import { getPlatformConfig, getPublicPlans } from "@/services/superadmin.service";
 
 export const apiRouter = Router();
 
@@ -40,6 +41,15 @@ apiRouter.get("/", (_req, res) => {
 apiRouter.use("/health", healthRouter);
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/discover", discoverRouter);
+
+apiRouter.get("/config", async (_req, res) => {
+  const config = await getPlatformConfig();
+  res.json(config);
+});
+
+apiRouter.get("/plans", async (_req, res) => {
+  res.json(await getPublicPlans());
+});
 
 apiRouter.use("/dashboard", requireAuth, auditMiddleware, dashboardRouter);
 apiRouter.use("/patients", requireAuth, auditMiddleware, patientsRouter);

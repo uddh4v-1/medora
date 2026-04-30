@@ -7,8 +7,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { Plan } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
+
+export type PricingCardProps = {
+  name: string;
+  price: string;
+  annualPrice: string | null;
+  cadence: string;
+  features: string[];
+  cta: string;
+  ctaVariant: "primary" | "outline";
+  highlighted: boolean;
+  annual: boolean;
+};
 
 export function PricingCard({
   name,
@@ -20,7 +31,7 @@ export function PricingCard({
   ctaVariant,
   highlighted,
   annual,
-}: Plan & { annual: boolean }) {
+}: PricingCardProps) {
   return (
     <Card
       className={cn(
@@ -36,7 +47,7 @@ export function PricingCard({
         </CardTitle>
         <div className="mt-3 flex items-baseline gap-1">
           <span className="text-3xl font-semibold text-foreground">
-            {annual ? annualPrice : price}
+            {annual && annualPrice ? annualPrice : price}
           </span>
           <span className="text-sm text-muted-foreground">{cadence}</span>
         </div>

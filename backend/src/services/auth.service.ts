@@ -8,6 +8,7 @@ import { getEnv } from "@/config/env";
 import { prisma } from "@/lib/prisma";
 import { normalizeIndianMobile } from "@/utils/phone";
 import { HttpError } from "@/utils/http-error";
+import { getPlatformConfig } from "@/services/superadmin.service";
 
 export type AuthUser = {
   id: string;
@@ -189,6 +190,13 @@ export async function loginWithCredentials(
     throw new HttpError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
 
+  if (user.role !== "SuperAdmin") {
+    const { maintenanceMode } = await getPlatformConfig();
+    if (maintenanceMode) {
+      throw new HttpError(503, "The platform is currently under maintenance. Please try again later.", "MAINTENANCE_MODE");
+    }
+  }
+
   if (user.status === "suspended") {
     throw new HttpError(403, "Your account has been suspended. Contact support.", "USER_SUSPENDED");
   }
@@ -272,6 +280,7 @@ export async function registerClinicOwner(input: {
           name: input.clinicName.trim(),
           slug,
           phone: phoneE164,
+          featureFlags: { create: {} }, // defaults: publicBooking=true, whatsappNotifications=false
         },
       });
 

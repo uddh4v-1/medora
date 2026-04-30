@@ -40,6 +40,8 @@ model Clinic {
   pincode     String?      @db.VarChar(20)
   specialties String[]     @default([])
   description String?      @db.Text
+  latitude    Float?
+  longitude   Float?
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   patients      Patient[]
@@ -48,6 +50,13 @@ model Clinic {
   prescriptions Prescription[]
   invoices      Invoice[]
   users         User[]
+
+  logoUrl    String?  @map("logo_url") @db.Text
+  brandColor String?  @map("brand_color") @db.VarChar(20)
+
+  parentClinicId String?  @map("parent_clinic_id")
+  parent         Clinic?  @relation("ClinicBranches", fields: [parentClinicId], references: [id], onDelete: SetNull)
+  branches       Clinic[] @relation("ClinicBranches")
 
   featureFlags     ClinicFeatureFlags?
   subscription     ClinicSubscription?
@@ -415,16 +424,21 @@ model DataDeletionRequest {
 // ── Custom Plans ──────────────────────────────────────────────────────────────
 
 model CustomPlan {
-  id          String   @id @default(cuid())
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
-  price       Int
-  maxPatients Int?     @map("max_patients")
-  maxUsers    Int?     @map("max_users")
-  features    Json     @default("{}")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(cuid())
+  name            String   @db.VarChar(100)
+  description     String?  @db.Text
+  price           Int
+  annualPrice     Int?     @map("annual_price")
+  maxPatients     Int?     @map("max_patients")
+  maxUsers        Int?     @map("max_users")
+  features        Json     @default("{}")
+  displayFeatures String[] @default([]) @map("display_features")
+  highlighted     Boolean  @default(false)
+  ctaText         String?  @db.VarChar(100) @map("cta_text")
+  sortOrder       Int      @default(0) @map("sort_order")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("custom_plans")
 }

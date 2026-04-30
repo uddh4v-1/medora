@@ -241,10 +241,21 @@ export interface ApiUsageResponse {
 // ── Custom Plans ──────────────────────────────────────────────────────────────
 
 export interface CustomPlan {
-  id: string; name: string; description: string | null; price: number;
-  maxPatients: number | null; maxUsers: number | null;
-  features: Record<string, boolean>; isActive: boolean;
-  createdAt: string; updatedAt: string;
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  annualPrice: number | null;
+  maxPatients: number | null;
+  maxUsers: number | null;
+  features: Record<string, boolean>;
+  displayFeatures: string[];
+  highlighted: boolean;
+  ctaText: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Financial Dashboard ───────────────────────────────────────────────────────

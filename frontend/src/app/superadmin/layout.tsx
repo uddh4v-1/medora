@@ -1,46 +1,95 @@
 import type { ReactNode } from "react";
+import { ThemeToggle } from "@/components/landing/theme-toggle";
 import { SuperAdminLogoutButton } from "./_components/superadmin-logout-button";
+import { SuperAdminSearch } from "./_components/superadmin-search";
 import { SuperAdminSessionSync } from "./_components/superadmin-session-sync";
+
+const navGroups = [
+  {
+    label: "Core",
+    items: [
+      { label: "Overview", href: "/superadmin" },
+      { label: "Clinics", href: "/superadmin/clinics" },
+      { label: "Users", href: "/superadmin/users" },
+      { label: "Admins", href: "/superadmin/admins" },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { label: "Financial", href: "/superadmin/financial" },
+      { label: "Billing", href: "/superadmin/billing" },
+      { label: "Payments", href: "/superadmin/payments" },
+      { label: "Custom Plans", href: "/superadmin/custom-plans" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { label: "Onboarding", href: "/superadmin/onboarding" },
+      { label: "Tickets", href: "/superadmin/tickets" },
+      { label: "Broadcasts", href: "/superadmin/broadcasts" },
+    ],
+  },
+  {
+    label: "Monitor",
+    items: [
+      { label: "Analytics", href: "/superadmin/analytics" },
+      { label: "Health", href: "/superadmin/health" },
+      { label: "Sys Health", href: "/superadmin/system-health" },
+      { label: "API Usage", href: "/superadmin/api-usage" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { label: "GDPR", href: "/superadmin/gdpr" },
+      { label: "Config", href: "/superadmin/config" },
+      { label: "Audit Logs", href: "/superadmin/logs" },
+    ],
+  },
+];
 
 export default function SuperAdminLayout({ children }: { children: ReactNode }) {
   return (
     <SuperAdminSessionSync>
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-card px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-destructive text-xs font-bold text-white">
-                SA
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Medora SuperAdmin</p>
-                <p className="text-[11px] text-muted-foreground">Platform control panel</p>
-              </div>
-            </div>
-            <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-              <a href="/superadmin" className="transition-colors hover:text-foreground">Overview</a>
-              <a href="/superadmin/clinics" className="transition-colors hover:text-foreground">Clinics</a>
-              <a href="/superadmin/users" className="transition-colors hover:text-foreground">Users</a>
-              <a href="/superadmin/analytics" className="transition-colors hover:text-foreground">Analytics</a>
-              <a href="/superadmin/financial" className="transition-colors hover:text-foreground">Financial</a>
-              <a href="/superadmin/health" className="transition-colors hover:text-foreground">Health</a>
-              <a href="/superadmin/billing" className="transition-colors hover:text-foreground">Billing</a>
-              <a href="/superadmin/payments" className="transition-colors hover:text-foreground">Payments</a>
-              <a href="/superadmin/onboarding" className="transition-colors hover:text-foreground">Onboarding</a>
-              <a href="/superadmin/tickets" className="transition-colors hover:text-foreground">Tickets</a>
-              <a href="/superadmin/broadcasts" className="transition-colors hover:text-foreground">Broadcasts</a>
-              <a href="/superadmin/admins" className="transition-colors hover:text-foreground">Admins</a>
-              <a href="/superadmin/gdpr" className="transition-colors hover:text-foreground">GDPR</a>
-              <a href="/superadmin/system-health" className="transition-colors hover:text-foreground">Sys Health</a>
-              <a href="/superadmin/api-usage" className="transition-colors hover:text-foreground">API Usage</a>
-              <a href="/superadmin/custom-plans" className="transition-colors hover:text-foreground">Custom Plans</a>
-              <a href="/superadmin/config" className="transition-colors hover:text-foreground">Config</a>
-              <a href="/superadmin/logs" className="transition-colors hover:text-foreground">Audit Logs</a>
-              <SuperAdminLogoutButton />
-            </nav>
+      <div className="flex min-h-screen flex-col bg-background">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-6 items-center justify-center rounded bg-destructive text-[10px] font-bold text-white">
+              SA
+            </span>
+            <span className="text-sm font-semibold text-foreground">SuperAdmin</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <SuperAdminSearch />
+            <ThemeToggle />
+            <SuperAdminLogoutButton />
           </div>
         </header>
-        <main className="px-6 py-8 md:px-10">{children}</main>
+        <div className="flex flex-1 overflow-hidden">
+          <aside className="flex w-52 shrink-0 flex-col border-r border-border bg-card">
+            <nav className="flex-1 overflow-y-auto px-2 py-3">
+              {navGroups.map((group) => (
+                <div key={group.label} className="mb-4">
+                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                    {group.label}
+                  </p>
+                  {group.items.map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className="block rounded px-2 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </aside>
+          <main className="flex-1 overflow-auto px-8 py-8">{children}</main>
+        </div>
       </div>
     </SuperAdminSessionSync>
   );

@@ -10,6 +10,8 @@ import { useI18n } from "@/lib/i18n/provider";
 
 import { DashboardPageHeader } from "../_components/page-header";
 import { AppearanceSettings } from "./_components/appearance-settings";
+import { BrandingSettings } from "./_components/branding-settings";
+import { DataExportSettings } from "./_components/data-export-settings";
 import { ProfileSettings } from "./_components/profile-settings";
 import { PublicBookingSettings } from "./_components/public-booking-settings";
 import { TeamSettings } from "./_components/team-settings";
@@ -33,6 +35,8 @@ export function SettingsPageClient() {
           <TabsTrigger value="appearance">
             {t("settings.tabAppearance")}
           </TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="data-export">Data & Export</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -49,6 +53,14 @@ export function SettingsPageClient() {
 
         <TabsContent value="appearance">
           <AppearanceSettings />
+        </TabsContent>
+
+        <TabsContent value="branding">
+          <BrandingSettings />
+        </TabsContent>
+
+        <TabsContent value="data-export">
+          <DataExportSettings />
         </TabsContent>
       </Tabs>
     </div>

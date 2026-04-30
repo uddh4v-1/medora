@@ -1,14 +1,21 @@
 import { prisma } from "@/lib/prisma";
 
 export type DiscoverQuery = {
+  name?:      string;
   city?:      string;
   pincode?:   string;
   specialty?: string;
+  lat?:       number;
+  lng?:       number;
+  radiusKm?:  number;
 };
 
 export async function getClinicBySlug(slug: string) {
   const clinic = await prisma.clinic.findFirst({
-    where: { slug, status: "active", featureFlags: { publicBooking: true } },
+    where: {
+      slug, status: "active",
+      OR: [{ featureFlags: null }, { featureFlags: { publicBooking: true } }],
+    },
     select: {
       id: true, name: true, slug: true, phone: true,
       address: true, city: true, state: true, pincode: true,
@@ -50,7 +57,10 @@ export async function createPublicAppointment(
   input: PublicBookingInput,
 ) {
   const clinic = await prisma.clinic.findFirst({
-    where: { slug, status: "active", featureFlags: { publicBooking: true } },
+    where: {
+      slug, status: "active",
+      OR: [{ featureFlags: null }, { featureFlags: { publicBooking: true } }],
+    },
     select: { id: true },
   });
   if (!clinic) return null;
@@ -96,13 +106,64 @@ export async function createPublicAppointment(
   };
 }
 
-export async function discoverClinics(query: DiscoverQuery) {
-  const { city, pincode, specialty } = query;
+type ProximityRow = {
+  id: string; name: string; slug: string; phone: string;
+  address: string | null; city: string | null; state: string | null;
+  pincode: string | null; specialties: string[]; description: string | null;
+  doctor_count: bigint; distance_km: number;
+};
 
+export async function discoverClinics(query: DiscoverQuery) {
+  const { name, city, pincode, specialty, lat, lng, radiusKm = 10 } = query;
+
+  // Proximity search when lat/lng are provided
+  if (lat !== undefined && lng !== undefined) {
+    const rows = await prisma.$queryRaw<ProximityRow[]>`
+      SELECT sub.*
+      FROM (
+        SELECT
+          c.id, c.name, c.slug, c.phone,
+          c.address, c.city, c.state, c.pincode,
+          c.specialties, c.description,
+          (SELECT COUNT(*) FROM users u
+           WHERE u.clinic_id = c.id AND u.role = 'Doctor' AND u.status = 'active') AS doctor_count,
+          (6371 * acos(LEAST(1.0,
+            cos(radians(${lat})) * cos(radians(c.latitude)) *
+            cos(radians(c.longitude) - radians(${lng})) +
+            sin(radians(${lat})) * sin(radians(c.latitude))
+          ))) AS distance_km
+        FROM clinics c
+        LEFT JOIN clinic_feature_flags f ON f.clinic_id = c.id
+        WHERE c.status = 'active'
+          AND (f.public_booking IS NULL OR f.public_booking = true)
+          AND c.latitude IS NOT NULL
+          AND c.longitude IS NOT NULL
+          AND (${specialty ?? null}::text IS NULL OR ${specialty ?? null}::text = ANY(c.specialties))
+      ) sub
+      WHERE sub.distance_km <= ${radiusKm}
+      ORDER BY sub.distance_km ASC
+      LIMIT 30
+    `;
+
+    return rows.map((c) => ({
+      id: c.id, name: c.name, slug: c.slug, phone: c.phone,
+      address: c.address, city: c.city, state: c.state, pincode: c.pincode,
+      specialties: c.specialties, description: c.description,
+      doctorCount: Number(c.doctor_count),
+      distanceKm: Math.round(c.distance_km * 10) / 10,
+    }));
+  }
+
+  // Text search: clinic name or city/pincode
+  // Treat missing featureFlags row as publicBooking=true (the default)
   const clinics = await prisma.clinic.findMany({
     where: {
       status: "active",
-      featureFlags: { publicBooking: true },
+      OR: [
+        { featureFlags: null },
+        { featureFlags: { publicBooking: true } },
+      ],
+      ...(name    && { name:    { contains: name,    mode: "insensitive" } }),
       ...(city    && { city:    { contains: city,    mode: "insensitive" } }),
       ...(pincode && { pincode: { contains: pincode, mode: "insensitive" } }),
       ...(specialty && { specialties: { has: specialty } }),
@@ -118,16 +179,10 @@ export async function discoverClinics(query: DiscoverQuery) {
   });
 
   return clinics.map((c) => ({
-    id:           c.id,
-    name:         c.name,
-    slug:         c.slug,
-    phone:        c.phone,
-    address:      c.address,
-    city:         c.city,
-    state:        c.state,
-    pincode:      c.pincode,
-    specialties:  c.specialties,
-    description:  c.description,
-    doctorCount:  c._count.users,
+    id: c.id, name: c.name, slug: c.slug, phone: c.phone,
+    address: c.address, city: c.city, state: c.state, pincode: c.pincode,
+    specialties: c.specialties, description: c.description,
+    doctorCount: c._count.users,
+    distanceKm: undefined as number | undefined,
   }));
 }

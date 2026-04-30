@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { currentClinic, formatCurrency } from "@/lib/dashboard-content";
+import { formatCurrency } from "@/lib/dashboard-content";
 import { useClinicStore, useHydrated } from "@/stores/clinic-store";
 
 async function downloadPdf(element: HTMLElement, filename: string) {
@@ -36,8 +36,16 @@ export function PrintInvoiceView({ id }: { id: string }) {
   const patient = useClinicStore((s) =>
     inv ? s.patients.find((p) => p.name === inv.patient) : undefined,
   );
+  const clinicProfile = useClinicStore((s) => s.clinicProfile);
+  const session = useClinicStore((s) => s.session);
   const printRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+
+  const clinicName = clinicProfile?.name ?? session?.clinic?.name ?? "Clinic";
+  const clinicPhone = clinicProfile?.phone ?? "";
+  const clinicAddress = [clinicProfile?.address, clinicProfile?.city].filter(Boolean).join(", ");
+  const logoUrl = clinicProfile?.logoUrl ?? null;
+  const brandColor = clinicProfile?.brandColor ?? "#2d5843";
 
   async function handleDownload() {
     if (!printRef.current || !inv) return;
@@ -119,21 +127,29 @@ export function PrintInvoiceView({ id }: { id: string }) {
       >
         <header className="flex items-start justify-between gap-6 border-b border-border pb-4">
           <div className="flex items-start gap-3">
-            <span className="flex size-12 items-center justify-center rounded-xl bg-brand text-brand-foreground">
-              <Stethoscope className="size-6" />
-            </span>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={clinicName}
+                className="size-12 rounded-xl object-contain"
+                style={{ background: brandColor + "1a" }}
+              />
+            ) : (
+              <span
+                className="flex size-12 items-center justify-center rounded-xl text-white"
+                style={{ backgroundColor: brandColor }}
+              >
+                <Stethoscope className="size-6" />
+              </span>
+            )}
             <div>
               <h1 className="text-xl font-bold tracking-tight">
-                {currentClinic.name}
+                {clinicName}
               </h1>
               <p className="text-xs text-muted-foreground">
-                {currentClinic.address} · {currentClinic.phone}
+                {[clinicAddress, clinicPhone].filter(Boolean).join(" · ")}
               </p>
-              {currentClinic.gst ? (
-                <p className="text-xs text-muted-foreground">
-                  GSTIN: {currentClinic.gst}
-                </p>
-              ) : null}
             </div>
           </div>
           <div className="text-right">
@@ -231,11 +247,11 @@ export function PrintInvoiceView({ id }: { id: string }) {
         <footer className="mt-auto flex items-end justify-between border-t border-border pt-6 text-xs text-muted-foreground">
           <p className="max-w-md leading-relaxed">
             Thank you for your visit. Payment received in good order.
-            For any clarification, please contact us at {currentClinic.phone}.
+            {clinicPhone ? `For any clarification, please contact us at ${clinicPhone}.` : "Thank you for choosing our clinic."}
           </p>
           <div className="text-right">
             <div className="mb-1 h-12 w-44 border-b border-foreground/40" />
-            <p className="font-medium text-foreground">{currentClinic.name}</p>
+            <p className="font-medium text-foreground">{clinicName}</p>
             <p className="text-[10px]">Authorized signature</p>
           </div>
         </footer>

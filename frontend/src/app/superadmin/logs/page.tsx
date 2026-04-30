@@ -16,6 +16,7 @@ import {
   type AuditLogItem,
   type AuditLogsQuery,
 } from "@/services/audit.service";
+import { toast } from "sonner";
 import { downloadExport } from "@/services/superadmin.service";
 
 const ACTION_OPTIONS = [
@@ -106,7 +107,7 @@ export default function AuditLogsPage() {
             {total.toLocaleString()} total events across all clinics
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => downloadExport("audit-logs")} className="h-8 gap-1.5 text-xs">
+        <Button variant="outline" size="sm" onClick={() => downloadExport("audit-logs").catch((e: Error) => toast.error(e.message))} className="h-8 gap-1.5 text-xs">
           <Download className="size-3.5" />Export CSV
         </Button>
       </div>

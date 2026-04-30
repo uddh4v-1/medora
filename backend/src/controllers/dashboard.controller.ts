@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 
 
 import { HttpError } from "@/utils/http-error";
-import { patientsQuerySchema, queueQuerySchema, visitIdParamSchema, updateQueueStatusBodySchema, invoicesQuerySchema, revenueSummaryQuerySchema } from "@/schemas/dashboard.schemas";
-import { fetchDashboardOverview, fetchPatients, fetchQueue, updateQueueStatus, fetchInvoices, fetchRevenueSummary } from "@/services/dashboard.service";
+import { patientsQuerySchema, queueQuerySchema, visitIdParamSchema, updateQueueStatusBodySchema, invoicesQuerySchema, revenueSummaryQuerySchema, reportsQuerySchema } from "@/schemas/dashboard.schemas";
+import { fetchDashboardOverview, fetchPatients, fetchQueue, updateQueueStatus, fetchInvoices, fetchRevenueSummary, fetchReportsOverview } from "@/services/dashboard.service";
 
 function requireClinicId(req: Request): string {
   const clinicId = req.auth?.clinicId;
@@ -87,5 +87,18 @@ export async function getRevenueSummary(req: Request, res: Response): Promise<vo
   }
 
   const data = await fetchRevenueSummary(clinicId, parsed.data);
+  res.status(200).json(data);
+}
+
+export async function getReportsOverview(req: Request, res: Response): Promise<void> {
+  const clinicId = requireClinicId(req);
+
+  const parsed = reportsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Invalid query params";
+    throw new HttpError(400, msg, "VALIDATION_ERROR");
+  }
+
+  const data = await fetchReportsOverview(clinicId, parsed.data);
   res.status(200).json(data);
 }

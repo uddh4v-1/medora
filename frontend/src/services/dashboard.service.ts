@@ -1,4 +1,19 @@
 import { apiGet, apiPatch } from "./api";
+
+export type RevenueSummaryResponse = {
+  range: { from: string; to: string };
+  series: { date: string; amount: number }[];
+  totals: { today: number; thisPeriod: number; collected: number; outstanding: number };
+  outstandingInvoices: { id: string; number: string; patientName: string; total: number }[];
+};
+
+export type ReportsOverviewResponse = {
+  range: { from: string; to: string };
+  topMedications: { name: string; count: number }[];
+  noShow: { count: number; total: number; ratePercent: number | null };
+  doctorUtilization: { name: string; appointmentCount: number }[];
+  appointmentsTrend: { date: string; count: number }[];
+};
 import type {
   DashboardInvoicesResponse,
   DashboardOverviewResponse,
@@ -56,5 +71,17 @@ export async function getDashboardInvoices(
 ) {
   return apiGet<DashboardInvoicesResponse>(
     `${DASHBOARD_BASE}/invoices${toQuery(query)}`,
+  );
+}
+
+export async function getRevenueSummary(from: string, to: string) {
+  return apiGet<RevenueSummaryResponse>(
+    `${DASHBOARD_BASE}/revenue/summary${toQuery({ from, to })}`,
+  );
+}
+
+export async function getReportsOverview(from: string, to: string) {
+  return apiGet<ReportsOverviewResponse>(
+    `${DASHBOARD_BASE}/reports${toQuery({ from, to })}`,
   );
 }

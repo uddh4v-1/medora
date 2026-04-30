@@ -455,9 +455,13 @@ export async function listCustomPlansHandler(_req: Request, res: Response): Prom
 }
 
 export async function createCustomPlanHandler(req: Request, res: Response): Promise<void> {
-  const { name, description, price, maxPatients, maxUsers, features } = req.body as { name: string; description?: string; price: number; maxPatients?: number; maxUsers?: number; features?: Record<string, boolean> };
-  if (!name || !price) throw new HttpError(400, "name and price required", "VALIDATION_ERROR");
-  res.status(201).json(await createCustomPlan({ name, description, price, maxPatients, maxUsers, features: features ?? {} }));
+  const { name, description, price, annualPrice, maxPatients, maxUsers, features, displayFeatures, highlighted, ctaText, sortOrder } = req.body as {
+    name: string; description?: string; price: number; annualPrice?: number;
+    maxPatients?: number; maxUsers?: number; features?: Record<string, boolean>;
+    displayFeatures?: string[]; highlighted?: boolean; ctaText?: string; sortOrder?: number;
+  };
+  if (!name || price == null) throw new HttpError(400, "name and price required", "VALIDATION_ERROR");
+  res.status(201).json(await createCustomPlan({ name, description, price, annualPrice, maxPatients, maxUsers, features: features ?? {}, displayFeatures, highlighted, ctaText, sortOrder }));
 }
 
 export async function updateCustomPlanHandler(req: Request, res: Response): Promise<void> {

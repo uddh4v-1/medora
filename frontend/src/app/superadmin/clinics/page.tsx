@@ -184,7 +184,7 @@ export default function ClinicsPage() {
             {total.toLocaleString()} registered clinic{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => downloadExport("clinics")} className="h-8 gap-1.5 text-xs">
+        <Button variant="outline" size="sm" onClick={() => downloadExport("clinics").catch((e: Error) => toast.error(e.message))} className="h-8 gap-1.5 text-xs">
           <Download className="size-3.5" />Export CSV
         </Button>
       </div>

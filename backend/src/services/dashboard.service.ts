@@ -3,6 +3,7 @@ import type {
   InvoicesQuery,
   PatientsQuery,
   QueueQuery,
+  ReportsQuery,
   RevenueSummaryQuery,
 } from "@/schemas/dashboard.schemas";
 import { HttpError } from "@/utils/http-error";
@@ -390,5 +391,70 @@ export async function fetchRevenueSummary(clinicId: string, query: RevenueSummar
       patientName: u.patient.name,
       total: u.total,
     })),
+  };
+}
+
+export async function fetchReportsOverview(clinicId: string, query: ReportsQuery) {
+  const from = asDateStart(query.from);
+  const to = asDateEnd(query.to);
+
+  if (from > to) throw new HttpError(400, "`from` must be <= `to`", "VALIDATION_ERROR");
+
+  const [prescriptionItems, appointments] = await Promise.all([
+    prisma.prescriptionItem.findMany({
+      where: { prescription: { clinicId, date: { gte: from, lte: to } } },
+      select: { name: true },
+    }),
+    prisma.appointment.findMany({
+      where: { clinicId, date: { gte: from, lte: to } },
+      select: {
+        status: true,
+        date: true,
+        doctor: { select: { name: true } },
+      },
+    }),
+  ]);
+
+  // Top medications
+  const medMap = new Map<string, number>();
+  for (const item of prescriptionItems) {
+    if (item.name) medMap.set(item.name, (medMap.get(item.name) ?? 0) + 1);
+  }
+  const topMedications = [...medMap.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+    .map(([name, count]) => ({ name, count }));
+
+  // No-show rate
+  const noShowCount = appointments.filter((a) => a.status === "no_show").length;
+  const total = appointments.length;
+  const ratePercent = total > 0 ? Math.round((noShowCount / total) * 100) : null;
+
+  // Doctor utilization
+  const docMap = new Map<string, number>();
+  for (const a of appointments) {
+    const name = a.doctor?.name ?? "Unassigned";
+    docMap.set(name, (docMap.get(name) ?? 0) + 1);
+  }
+  const doctorUtilization = [...docMap.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, appointmentCount]) => ({ name, appointmentCount }));
+
+  // Daily appointments trend
+  const trendMap = new Map<string, number>();
+  for (const a of appointments) {
+    const d = yyyyMmDd(a.date);
+    trendMap.set(d, (trendMap.get(d) ?? 0) + 1);
+  }
+  const appointmentsTrend = [...trendMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, count]) => ({ date, count }));
+
+  return {
+    range: { from: query.from, to: query.to },
+    topMedications,
+    noShow: { count: noShowCount, total, ratePercent },
+    doctorUtilization,
+    appointmentsTrend,
   };
 }

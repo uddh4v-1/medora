@@ -2,12 +2,13 @@
 
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useI18n } from "@/lib/i18n/provider";
 import { useClinicStore } from "@/stores/clinic-store";
 import { postLogin } from "@/services/auth.service";
+import { getApiBaseUrl } from "@/services/api";
 
 /**
  * Login form state + submission — keeps `login-form.tsx` focused on layout.
@@ -21,6 +22,18 @@ export function useLoginForm() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [maintenanceWarning, setMaintenanceWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/api/config`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d: { maintenanceMode?: boolean; bannerMessage?: string | null }) => {
+        if (d.maintenanceMode) {
+          setMaintenanceWarning(d.bannerMessage ?? "The platform is currently under maintenance.");
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,7 +70,11 @@ export function useLoginForm() {
           return;
         }
 
-        toast.error(data.error ?? t("auth.loginFailed"));
+        if (data.code === "MAINTENANCE_MODE") {
+          toast.error("Platform is under maintenance. Please try again later.");
+        } else {
+          toast.error(data.error ?? t("auth.loginFailed"));
+        }
       } catch (error: unknown) {
         const offline =
           axios.isAxiosError(error) &&
@@ -91,6 +108,7 @@ export function useLoginForm() {
     rememberMe,
     setRememberMe,
     isSubmitting,
+    maintenanceWarning,
     onSubmit,
   };
 }

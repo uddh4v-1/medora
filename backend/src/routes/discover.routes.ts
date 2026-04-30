@@ -11,11 +11,15 @@ import {
 export const discoverRouter = Router();
 
 discoverRouter.get("/clinics", asyncHandler(async (req, res) => {
+  const name      = typeof req.query.name      === "string" ? req.query.name.trim()      : undefined;
   const city      = typeof req.query.city      === "string" ? req.query.city.trim()      : undefined;
   const pincode   = typeof req.query.pincode   === "string" ? req.query.pincode.trim()   : undefined;
   const specialty = typeof req.query.specialty === "string" ? req.query.specialty.trim() : undefined;
+  const lat       = typeof req.query.lat       === "string" ? parseFloat(req.query.lat)       : undefined;
+  const lng       = typeof req.query.lng       === "string" ? parseFloat(req.query.lng)       : undefined;
+  const radiusKm  = typeof req.query.radiusKm  === "string" ? parseFloat(req.query.radiusKm)  : undefined;
 
-  const results = await discoverClinics({ city, pincode, specialty });
+  const results = await discoverClinics({ name, city, pincode, specialty, lat, lng, radiusKm });
   res.json({ clinics: results });
 }));
 

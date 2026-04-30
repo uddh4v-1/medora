@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "./api";
+import { apiDelete, apiGet, apiPatch, apiPost, getApiBaseUrl } from "./api";
 import type {
   ClinicDetail, ClinicListResponse, SetClinicStatusResponse,
   UserListResponse, SetUserStatusResponse, ImpersonateClinicResponse,
@@ -227,12 +227,27 @@ export function listHealthScores(params: ListHealthScoresParams = {}) {
 
 // ── Data Export ───────────────────────────────────────────────────────────────
 
-export function downloadExport(type: "clinics" | "users" | "audit-logs") {
-  window.open(`${BASE}/export/${type}`, "_blank");
+async function triggerDownload(url: string, filename: string): Promise<void> {
+  const res = await fetch(`${getApiBaseUrl()}${url}`, { credentials: "include" });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
 }
 
-export function downloadClinicData(clinicId: string) {
-  window.open(`${BASE}/export/clinic/${clinicId}`, "_blank");
+export async function downloadExport(type: "clinics" | "users" | "audit-logs"): Promise<void> {
+  const date = new Date().toISOString().slice(0, 10);
+  await triggerDownload(`${BASE}/export/${type}`, `${type}-${date}.csv`);
+}
+
+export async function downloadClinicData(clinicId: string): Promise<void> {
+  await triggerDownload(`${BASE}/export/clinic/${clinicId}`, `clinic-${clinicId}-data.json`);
 }
 
 // ── Onboarding ────────────────────────────────────────────────────────────────
@@ -367,7 +382,11 @@ export function listCustomPlans() {
   return apiGet<CustomPlan[]>(`${BASE}/custom-plans`);
 }
 
-export function createCustomPlan(data: { name: string; description?: string; price: number; maxPatients?: number; maxUsers?: number; features?: Record<string, boolean> }) {
+export function createCustomPlan(data: {
+  name: string; description?: string; price: number; annualPrice?: number;
+  maxPatients?: number; maxUsers?: number; features?: Record<string, boolean>;
+  displayFeatures?: string[]; highlighted?: boolean; ctaText?: string; sortOrder?: number;
+}) {
   return apiPost<CustomPlan, typeof data>(`${BASE}/custom-plans`, data);
 }
 

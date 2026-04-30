@@ -42,3 +42,10 @@ export const revenueSummaryQuerySchema = z.object({
 });
 
 export type RevenueSummaryQuery = z.infer<typeof revenueSummaryQuerySchema>;
+
+export const reportsQuerySchema = z.object({
+  from: z.string().regex(isoDateRegex, "from must be YYYY-MM-DD"),
+  to: z.string().regex(isoDateRegex, "to must be YYYY-MM-DD"),
+});
+
+export type ReportsQuery = z.infer<typeof reportsQuerySchema>;
