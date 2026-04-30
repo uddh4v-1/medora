@@ -95,6 +95,7 @@ export const features: Feature[] = [
 export type Plan = {
   name: string;
   price: string;
+  annualPrice: string;
   cadence: string;
   features: string[];
   cta: string;
@@ -152,38 +153,43 @@ export const contactMeta = {
 
 export const plans: Plan[] = [
   {
-    name: "Starter",
-    price: "₹499",
+    name: "Solo",
+    price: "₹999",
+    annualPrice: "₹799",
     cadence: "/mo",
-    features: ["1 doctor", "100 patients", "WhatsApp bot", "Basic analytics"],
+    features: ["1 doctor", "500 patients", "Appointments & visits", "Invoicing & reports", "Public booking page"],
     cta: "Start free trial",
     ctaVariant: "outline",
     highlighted: false,
   },
   {
-    name: "Pro",
-    price: "₹1,499",
+    name: "Clinic",
+    price: "₹1,999",
+    annualPrice: "₹1,599",
     cadence: "/mo",
     features: [
-      "3 doctors",
+      "Up to 5 doctors",
       "Unlimited patients",
-      "AI insights",
+      "Broadcast notifications",
+      "WhatsApp reminders",
       "Prescription PDFs",
-      "Razorpay payments",
+      "Advanced analytics",
     ],
     cta: "Start free trial",
     ctaVariant: "primary",
     highlighted: true,
   },
   {
-    name: "Clinic",
-    price: "₹3,999",
+    name: "Enterprise",
+    price: "₹5,999",
+    annualPrice: "₹4,799",
     cadence: "/mo",
     features: [
       "Unlimited doctors",
       "Multi-location",
-      "Priority support",
       "Custom branding",
+      "Priority support",
+      "Dedicated onboarding",
     ],
     cta: "Talk to sales",
     ctaVariant: "outline",

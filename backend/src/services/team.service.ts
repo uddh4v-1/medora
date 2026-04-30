@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/utils/http-error";
 import { hashPassword } from "@/services/auth.service";
+import { assertDoctorLimit } from "@/lib/plan-limits";
 import type { CreateTeamMemberBody } from "@/schemas/team.schemas";
 
 export async function fetchTeamMembers(clinicId: string) {
@@ -23,6 +24,10 @@ export async function fetchTeamMembers(clinicId: string) {
 }
 
 export async function addTeamMember(clinicId: string, body: CreateTeamMemberBody) {
+  if (body.role === "Doctor") {
+    await assertDoctorLimit(clinicId);
+  }
+
   const existing = await prisma.user.findUnique({
     where: { email: body.email },
     select: { id: true },

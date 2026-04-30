@@ -13,12 +13,14 @@ import { cn } from "@/lib/utils";
 export function PricingCard({
   name,
   price,
+  annualPrice,
   cadence,
   features,
   cta,
   ctaVariant,
   highlighted,
-}: Plan) {
+  annual,
+}: Plan & { annual: boolean }) {
   return (
     <Card
       className={cn(
@@ -34,7 +36,7 @@ export function PricingCard({
         </CardTitle>
         <div className="mt-3 flex items-baseline gap-1">
           <span className="text-3xl font-semibold text-foreground">
-            {price}
+            {annual ? annualPrice : price}
           </span>
           <span className="text-sm text-muted-foreground">{cadence}</span>
         </div>

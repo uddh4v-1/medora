@@ -49,9 +49,12 @@ model Clinic {
   invoices      Invoice[]
   users         User[]
 
-  featureFlags  ClinicFeatureFlags?
-  subscription  ClinicSubscription?
-  broadcasts    Broadcast[]
+  featureFlags     ClinicFeatureFlags?
+  subscription     ClinicSubscription?
+  broadcasts       Broadcast[]
+  supportTickets   SupportTicket[]
+  paymentRecords   PaymentRecord[]
+  deletionRequests DataDeletionRequest[]
 
   @@map("clinics")
 }
@@ -322,6 +325,109 @@ model Broadcast {
 }
 
 // ── Billing ───────────────────────────────────────────────────────────────────
+
+// ── SuperAdmin Broadcasts ─────────────────────────────────────────────────────
+
+model SuperAdminBroadcast {
+  id             String    @id @default(cuid())
+  subject        String    @db.Text
+  body           String    @db.Text
+  segment        String    @db.VarChar(32)
+  recipientCount Int       @map("recipient_count")
+  sentBy         String?   @map("sent_by")
+  scheduledAt    DateTime? @map("scheduled_at")
+  sentAt         DateTime? @map("sent_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("superadmin_broadcasts")
+}
+
+// ── Support Tickets ───────────────────────────────────────────────────────────
+
+model SupportTicket {
+  id        String          @id @default(cuid())
+  clinicId  String          @map("clinic_id")
+  clinic    Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  userId    String?         @map("user_id")
+  subject   String          @db.Text
+  status    String          @default("open") @db.VarChar(32)
+  priority  String          @default("medium") @db.VarChar(32)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  messages  TicketMessage[]
+
+  @@index([clinicId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id        String        @id @default(cuid())
+  ticketId  String        @map("ticket_id")
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String?       @map("author_id")
+  body      String        @db.Text
+  isStaff   Boolean       @default(false) @map("is_staff")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+// ── Payment Records ───────────────────────────────────────────────────────────
+
+model PaymentRecord {
+  id          String    @id @default(cuid())
+  clinicId    String    @map("clinic_id")
+  clinic      Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  amount      Int
+  plan        String    @db.VarChar(32)
+  status      String    @default("paid") @db.VarChar(32)
+  description String?   @db.Text
+  periodStart DateTime? @map("period_start")
+  periodEnd   DateTime? @map("period_end")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([clinicId, createdAt])
+  @@map("payment_records")
+}
+
+// ── GDPR Deletion Requests ────────────────────────────────────────────────────
+
+model DataDeletionRequest {
+  id          String    @id @default(cuid())
+  clinicId    String    @map("clinic_id")
+  clinic      Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  requestedBy String?   @map("requested_by")
+  reason      String?   @db.Text
+  status      String    @default("pending") @db.VarChar(32)
+  scheduledAt DateTime? @map("scheduled_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([clinicId])
+  @@index([status])
+  @@map("data_deletion_requests")
+}
+
+// ── Custom Plans ──────────────────────────────────────────────────────────────
+
+model CustomPlan {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  price       Int
+  maxPatients Int?     @map("max_patients")
+  maxUsers    Int?     @map("max_users")
+  features    Json     @default("{}")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("custom_plans")
+}
 
 model ClinicSubscription {
   id                 String    @id @default(cuid())

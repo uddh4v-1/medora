@@ -1,12 +1,26 @@
 "use client";
 
-import { ArrowLeft, Printer, Stethoscope } from "lucide-react";
+import { ArrowLeft, Download, Printer, Stethoscope } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { currentClinic, formatCurrency } from "@/lib/dashboard-content";
 import { useClinicStore, useHydrated } from "@/stores/clinic-store";
+
+async function downloadPdf(element: HTMLElement, filename: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const html2pdf = (await import("html2pdf.js" as any)).default;
+  await html2pdf()
+    .set({
+      margin: 10,
+      filename,
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    })
+    .from(element)
+    .save();
+}
 
 function formatDate(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
@@ -22,12 +36,18 @@ export function PrintInvoiceView({ id }: { id: string }) {
   const patient = useClinicStore((s) =>
     inv ? s.patients.find((p) => p.name === inv.patient) : undefined,
   );
+  const printRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
-    if (!inv) return;
-    const t = window.setTimeout(() => window.print(), 600);
-    return () => window.clearTimeout(t);
-  }, [inv]);
+  async function handleDownload() {
+    if (!printRef.current || !inv) return;
+    setDownloading(true);
+    try {
+      await downloadPdf(printRef.current, `invoice-${inv.number}.pdf`);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   if (!hydrated) {
     return (
@@ -71,17 +91,32 @@ export function PrintInvoiceView({ id }: { id: string }) {
           <ArrowLeft className="size-3.5" />
           Back to billing
         </Link>
-        <Button
-          type="button"
-          onClick={() => window.print()}
-          className="h-9 gap-1.5 rounded-lg bg-brand px-3 text-xs text-brand-foreground hover:bg-brand/90"
-        >
-          <Printer className="size-3.5" />
-          Print
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={downloading}
+            onClick={handleDownload}
+            className="h-9 gap-1.5 rounded-lg border-border px-3 text-xs"
+          >
+            <Download className="size-3.5" />
+            {downloading ? "Generating…" : "Download PDF"}
+          </Button>
+          <Button
+            type="button"
+            onClick={() => window.print()}
+            className="h-9 gap-1.5 rounded-lg bg-brand px-3 text-xs text-brand-foreground hover:bg-brand/90"
+          >
+            <Printer className="size-3.5" />
+            Print
+          </Button>
+        </div>
       </div>
 
-      <div className="print-page mx-auto flex max-w-3xl flex-col gap-6 rounded-xl border border-border bg-card p-10 text-foreground shadow-sm">
+      <div
+        ref={printRef}
+        className="print-page mx-auto flex max-w-3xl flex-col gap-6 rounded-xl border border-border bg-card p-10 text-foreground shadow-sm"
+      >
         <header className="flex items-start justify-between gap-6 border-b border-border pb-4">
           <div className="flex items-start gap-3">
             <span className="flex size-12 items-center justify-center rounded-xl bg-brand text-brand-foreground">

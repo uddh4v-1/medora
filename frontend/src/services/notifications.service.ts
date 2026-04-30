@@ -16,6 +16,7 @@ export type PostBroadcastInput = {
   title: string;
   body: string;
   recipientCount: number;
+  patientIds: string[];
 };
 
 export async function postBroadcast(input: PostBroadcastInput) {

@@ -110,6 +110,7 @@ export default function NotificationsPage() {
       title: title.trim(),
       body: body.trim(),
       recipientCount: recipients.length,
+      patientIds: recipients.map((r) => r.id),
     });
     setSending(false);
     if (!res.ok) {

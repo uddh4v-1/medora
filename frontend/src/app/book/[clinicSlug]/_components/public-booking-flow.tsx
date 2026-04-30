@@ -32,6 +32,7 @@ import type { PublicClinic } from "@/services/discover.service";
 import { createPublicBookingAppointment } from "@/services/discover.service";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { isValidIndianPhone } from "@/lib/validation";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -216,6 +217,8 @@ export function PublicBookingFlow({ clinic }: { clinic: PublicClinic }) {
   async function handleConfirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selectedDoctor || !date || !slot || !name.trim() || !phone.trim()) return;
+    if (name.trim().length < 2) { toast.error("Please enter your full name"); return; }
+    if (!isValidIndianPhone(phone)) { toast.error("Enter a valid 10-digit Indian mobile number"); return; }
 
     const cleanName = name.trim();
     const cleanPhone = phone.trim();

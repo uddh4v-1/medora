@@ -10,6 +10,7 @@ const BroadcastBody = z.object({
   title:          z.string().min(1),
   body:           z.string().min(1),
   recipientCount: z.number().int().min(0),
+  patientIds:     z.array(z.string()).default([]),
 });
 
 export const postBroadcast = asyncHandler(async (req, res) => {
@@ -21,13 +22,13 @@ export const postBroadcast = asyncHandler(async (req, res) => {
     throw new HttpError(400, "Invalid body");
   }
 
-  const broadcast = await saveBroadcast({
+  const { broadcast, deliveredCount } = await saveBroadcast({
     clinicId,
     userId: req.auth?.userId,
     ...parsed.data,
   });
 
-  res.status(201).json({ broadcast });
+  res.status(201).json({ broadcast, deliveredCount });
 });
 
 export const listBroadcasts = asyncHandler(async (req, res) => {

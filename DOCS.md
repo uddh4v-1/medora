@@ -16,9 +16,10 @@
 8. [Key Concepts](#key-concepts)
 9. [API Overview](#api-overview)
 10. [Frontend Routes](#frontend-routes)
-11. [State Management](#state-management)
-12. [Email](#email)
-13. [Scripts & CLI Tools](#scripts--cli-tools)
+11. [SuperAdmin Panel](#superadmin-panel)
+12. [State Management](#state-management)
+13. [Email](#email)
+14. [Scripts & CLI Tools](#scripts--cli-tools)
 
 ---
 
@@ -328,6 +329,78 @@ erDiagram
     Clinic ||--|| ClinicFeatureFlags : "has flags"
     Clinic ||--|| ClinicSubscription : "has subscription"
     Clinic ||--o{ Broadcast : "has broadcasts"
+    Clinic ||--o{ SupportTicket : "has tickets"
+    Clinic ||--o{ PaymentRecord : "has payments"
+    Clinic ||--o{ DataDeletionRequest : "has deletion requests"
+
+    SupportTicket {
+        string id PK
+        string clinicId FK
+        string subject
+        string status
+        string priority
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    TicketMessage {
+        string id PK
+        string ticketId FK
+        string body
+        boolean isStaff
+        string authorId
+        datetime createdAt
+    }
+
+    PaymentRecord {
+        string id PK
+        string clinicId FK
+        int amount
+        string plan
+        string status
+        string description
+        datetime periodStart
+        datetime periodEnd
+        datetime createdAt
+    }
+
+    DataDeletionRequest {
+        string id PK
+        string clinicId FK
+        string reason
+        string status
+        string requestedBy
+        datetime scheduledAt
+        datetime completedAt
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SuperAdminBroadcast {
+        string id PK
+        string subject
+        string body
+        string segment
+        int recipientCount
+        string sentBy
+        datetime sentAt
+        datetime createdAt
+    }
+
+    CustomPlan {
+        string id PK
+        string name
+        string description
+        int price
+        int maxPatients
+        int maxUsers
+        json features
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SupportTicket ||--o{ TicketMessage : "has messages"
 
     Patient ||--o{ Visit : "has visits"
     Patient ||--o{ Appointment : "has appointments"
@@ -687,7 +760,34 @@ Full interactive docs at `/api/docs` (Scalar).
 | `POST /api/notifications/broadcast` | Yes | Save a sent broadcast (audience, kind, title, body, recipientCount) |
 | `GET /api/notifications/broadcasts` | Yes | List broadcast history for the current clinic |
 | `POST /api/superadmin/exit-impersonation` | Yes (any auth) | Exit impersonation session |
-| `GET/POST/PATCH/DELETE /api/superadmin/*` | Yes (SuperAdmin) | Platform admin operations |
+| `GET/POST/PATCH/DELETE /api/superadmin/clinics` | Yes (SuperAdmin) | Clinic CRUD, status, impersonate |
+| `POST /api/superadmin/clinics/bulk` | Yes (SuperAdmin) | Bulk activate / suspend / delete clinics |
+| `GET/POST/PATCH/DELETE /api/superadmin/users` | Yes (SuperAdmin) | User management, force reset, verify email |
+| `GET /api/superadmin/analytics` | Yes (SuperAdmin) | Platform analytics overview |
+| `GET /api/superadmin/financial` | Yes (SuperAdmin) | MRR, ARR, churn rate, revenue by plan, MRR trend |
+| `GET /api/superadmin/health-scores` | Yes (SuperAdmin) | Clinic activity health scores (at-risk view) |
+| `GET /api/superadmin/onboarding` | Yes (SuperAdmin) | Onboarding completion per clinic |
+| `GET/POST /api/superadmin/broadcasts` | Yes (SuperAdmin) | SuperAdmin broadcast emails by segment |
+| `GET/POST /api/superadmin/tickets` | Yes (SuperAdmin) | Support ticket list and create |
+| `GET /api/superadmin/tickets/:id` | Yes (SuperAdmin) | Ticket detail with message thread |
+| `POST /api/superadmin/tickets/:id/reply` | Yes (SuperAdmin) | Add reply to a ticket |
+| `PATCH /api/superadmin/tickets/:id/status` | Yes (SuperAdmin) | Update ticket status |
+| `GET/POST /api/superadmin/admins` | Yes (SuperAdmin) | List and create SuperAdmin accounts |
+| `DELETE /api/superadmin/admins/:id` | Yes (SuperAdmin) | Delete a SuperAdmin account |
+| `GET/POST /api/superadmin/payments` | Yes (SuperAdmin) | Payment record list and create |
+| `GET/POST /api/superadmin/gdpr/requests` | Yes (SuperAdmin) | GDPR deletion request list and create |
+| `PATCH /api/superadmin/gdpr/requests/:id/status` | Yes (SuperAdmin) | Approve / reject / complete deletion request |
+| `GET /api/superadmin/system-health` | Yes (SuperAdmin) | DB stats, activity trend, uptime |
+| `GET /api/superadmin/api-usage` | Yes (SuperAdmin) | Per-clinic request volume from audit logs |
+| `GET/POST /api/superadmin/custom-plans` | Yes (SuperAdmin) | Custom billing plans |
+| `PATCH/DELETE /api/superadmin/custom-plans/:id` | Yes (SuperAdmin) | Update or delete a custom plan |
+| `GET /api/superadmin/export/clinics` | Yes (SuperAdmin) | Download clinics CSV |
+| `GET /api/superadmin/export/users` | Yes (SuperAdmin) | Download users CSV |
+| `GET /api/superadmin/export/audit-logs` | Yes (SuperAdmin) | Download audit log CSV |
+| `GET /api/superadmin/export/clinic/:id` | Yes (SuperAdmin) | Download all data for one clinic (JSON) |
+| `GET/PATCH /api/superadmin/config/flags` | Yes (SuperAdmin) | Per-clinic feature flags |
+| `GET/PATCH /api/superadmin/config/platform` | Yes (SuperAdmin) | Platform-wide config (maintenance mode, banner) |
+| `GET/PATCH /api/superadmin/billing` | Yes (SuperAdmin) | Billing subscription list, extend trial, set plan |
 
 ---
 
@@ -716,7 +816,74 @@ Full interactive docs at `/api/docs` (Scalar).
 | `/print/rx/[id]` | Yes | Printable prescription |
 | `/find-clinics` | No | Patient-facing clinic discovery — search by city, pincode, specialty |
 | `/book/[clinicSlug]` | No | Public patient booking page |
-| `/superadmin/*` | Yes (SuperAdmin) | Platform admin panel |
+| `/superadmin` | Yes (SuperAdmin) | Platform overview |
+| `/superadmin/clinics` | Yes (SuperAdmin) | All clinics — search, filter, bulk actions, impersonate |
+| `/superadmin/users` | Yes (SuperAdmin) | All users — status, force reset, verify email |
+| `/superadmin/analytics` | Yes (SuperAdmin) | Platform analytics |
+| `/superadmin/financial` | Yes (SuperAdmin) | Financial dashboard — MRR/ARR, churn, revenue by plan |
+| `/superadmin/health` | Yes (SuperAdmin) | Clinic health scores — at-risk clinics |
+| `/superadmin/billing` | Yes (SuperAdmin) | Subscription management, extend trial |
+| `/superadmin/payments` | Yes (SuperAdmin) | Invoice & payment history |
+| `/superadmin/onboarding` | Yes (SuperAdmin) | Onboarding completion tracker per clinic |
+| `/superadmin/tickets` | Yes (SuperAdmin) | Support ticket system with threaded replies |
+| `/superadmin/broadcasts` | Yes (SuperAdmin) | Broadcast emails to clinic owners by segment |
+| `/superadmin/admins` | Yes (SuperAdmin) | SuperAdmin account management |
+| `/superadmin/gdpr` | Yes (SuperAdmin) | GDPR deletion requests — approve/reject/complete |
+| `/superadmin/system-health` | Yes (SuperAdmin) | DB snapshot, activity trend, uptime |
+| `/superadmin/api-usage` | Yes (SuperAdmin) | Per-clinic API request volume |
+| `/superadmin/custom-plans` | Yes (SuperAdmin) | Custom plan builder |
+| `/superadmin/config` | Yes (SuperAdmin) | Feature flags and platform config |
+| `/superadmin/logs` | Yes (SuperAdmin) | Audit log viewer with export |
+
+---
+
+## SuperAdmin Panel
+
+The SuperAdmin panel (`/superadmin/*`) is a separate section of the app protected by `requireSuperAdmin` middleware. SuperAdmins cannot access clinic data directly — they must impersonate a clinic first.
+
+### Features
+
+| Feature | Page | Description |
+|---|---|---|
+| Clinic Management | `/superadmin/clinics` | List, search, filter, activate/suspend, delete, impersonate. Bulk actions (activate all, suspend all, delete all selected). |
+| User Management | `/superadmin/users` | List all users across all clinics. Activate/suspend, force password reset, manually verify email. |
+| Financial Dashboard | `/superadmin/financial` | MRR, ARR, churn rate, trials expiring. MRR trend (12 months), revenue by plan breakdown, top clinic by MRR. |
+| Clinic Health Scores | `/superadmin/health` | Per-clinic activity score (0–100) calculated from appointments, patients, and invoices in the last 30 days. Risk-level filter (high/medium/low). |
+| Billing Management | `/superadmin/billing` | View subscription status per clinic, extend trial by N days, change plan. |
+| Payment History | `/superadmin/payments` | Manual payment records per clinic. Create paid/pending/failed/refunded records for accounting. |
+| Onboarding Tracker | `/superadmin/onboarding` | Per-clinic step completion (profile, hours, team, services, first patient, first appointment). Highlights clinics below 60%. |
+| Support Tickets | `/superadmin/tickets` | Split-view ticket list + threaded message detail. Create tickets on behalf of a clinic, reply as staff, change status (open/in_progress/resolved/closed). |
+| Broadcast Messaging | `/superadmin/broadcasts` | Send emails to clinic owners filtered by segment (all, trial, active, cancelled, starter, pro). Sent history with recipient count. |
+| SuperAdmin Accounts | `/superadmin/admins` | List, create, and delete SuperAdmin accounts. Two-click confirmation on delete. |
+| GDPR / Data Tools | `/superadmin/gdpr` | Deletion requests — submit, approve, reject, or mark complete. Export full clinic data as JSON. |
+| System Health | `/superadmin/system-health` | DB row counts (clinics, users, patients, appointments, invoices), activity stats (last 24h / 7d / errors), active users count, 7-day bar chart, server uptime. |
+| API Usage | `/superadmin/api-usage` | Per-clinic audit-log request count for the past 30 days. Relative bar visualization, ranked by volume. |
+| Custom Plans | `/superadmin/custom-plans` | Create bespoke plans with name, price, patient/user limits, and feature toggles. Used when standard Starter/Pro doesn't fit. |
+| Feature Flags | `/superadmin/config` | Toggle `publicBooking` and `whatsappNotifications` per clinic. Platform-wide maintenance mode and banner message. |
+| Data Export | Clinics, Users, Audit Logs pages | Export current filtered view as CSV via `GET /api/superadmin/export/{type}`. Per-clinic JSON export from GDPR page. |
+| Bulk Operations | `/superadmin/clinics` | Select multiple clinics via checkboxes and bulk-activate, bulk-suspend, or bulk-delete in one action. |
+
+### Plan pricing (hardcoded constants)
+
+The financial dashboard calculates MRR/ARR from `ClinicSubscription.plan` using these constants:
+
+| Plan | Monthly price (paise) | INR |
+|---|---|---|
+| `trial` | 0 | ₹0 |
+| `starter` | 299900 | ₹2,999 |
+| `pro` | 799900 | ₹7,999 |
+| `custom` | varies (from `CustomPlan.price`) | — |
+
+### Broadcast segments
+
+| Segment value | Audience |
+|---|---|
+| `all` | All clinic owners |
+| `trial` | Clinics on trial billing status |
+| `active` | Clinics with active (paid) status |
+| `cancelled` | Clinics with cancelled status |
+| `starter` | Clinics on the Starter plan |
+| `pro` | Clinics on the Pro plan |
 
 ---
 

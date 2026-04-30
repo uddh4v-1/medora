@@ -21,6 +21,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { updateClinic } from "@/services/clinic.service";
 import { useClinicStore } from "@/stores/clinic-store";
 import { useOnboardingStore, type WorkingHours } from "@/stores/onboarding-store";
+import { isValidIndianPhone, isValidPincode, isValidGST } from "@/lib/validation";
 
 const TIMEZONES = [
   { value: "Asia/Kolkata", label: "Asia / Kolkata (IST · GMT+5:30)" },
@@ -101,6 +102,10 @@ export function ProfileSettings() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (name.trim().length < 2) { toast.error("Clinic name must be at least 2 characters"); return; }
+    if (phone.trim() && !isValidIndianPhone(phone)) { toast.error("Enter a valid 10-digit Indian phone number"); return; }
+    if (pincode.trim() && !isValidPincode(pincode)) { toast.error("Pincode must be exactly 6 digits"); return; }
+    if (gst.trim() && !isValidGST(gst)) { toast.error("Enter a valid 15-character GST number (e.g. 22AAAAA0000A1Z5)"); return; }
     setSaving(true);
     try {
       const res = await updateClinic({

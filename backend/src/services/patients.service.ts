@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/utils/http-error";
+import { assertPatientLimit } from "@/lib/plan-limits";
 import type { CreatePatientBody, UpdatePatientBody } from "@/schemas/patients.schemas";
 
 function yyyyMmDd(d: Date): string {
@@ -11,6 +12,8 @@ function asDateStart(iso: string): Date {
 }
 
 export async function createPatient(clinicId: string, body: CreatePatientBody) {
+  await assertPatientLimit(clinicId);
+
   const patient = await prisma.patient.create({
     data: {
       clinicId,

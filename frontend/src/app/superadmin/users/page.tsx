@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Download,
   KeyRound,
   Loader2,
   MailCheck,
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  downloadExport,
   forcePasswordReset,
   listUsers,
   setUserStatus,
@@ -133,11 +135,16 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Users</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {total.toLocaleString()} clinic staff member{total !== 1 ? "s" : ""} across all clinics
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Users</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {total.toLocaleString()} clinic staff member{total !== 1 ? "s" : ""} across all clinics
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => downloadExport("users")} className="h-8 gap-1.5 text-xs">
+          <Download className="size-3.5" />Export CSV
+        </Button>
       </div>
 
       {/* Filters */}

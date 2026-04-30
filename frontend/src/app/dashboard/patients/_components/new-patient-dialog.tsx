@@ -24,6 +24,7 @@ import { type Gender, type Patient } from "@/lib/dashboard-content";
 import { useClinicStore } from "@/stores/clinic-store";
 import { createPatient } from "@/services/patients.service";
 import { toast } from "sonner";
+import { isValidEmail, isValidIndianPhone } from "@/lib/validation";
 
 const fieldClass =
   "h-11 rounded-lg border-border bg-card text-sm focus-visible:ring-brand/40";
@@ -52,6 +53,11 @@ export function NewPatientDialog() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim() || saving) return;
+    if (name.trim().length < 2) { toast.error("Name must be at least 2 characters"); return; }
+    if (phone.trim() && !isValidIndianPhone(phone)) { toast.error("Enter a valid 10-digit Indian phone number"); return; }
+    if (email.trim() && !isValidEmail(email)) { toast.error("Enter a valid email address"); return; }
+    const ageNum = age ? parseInt(age, 10) : null;
+    if (age && (isNaN(ageNum!) || ageNum! < 0 || ageNum! > 120)) { toast.error("Age must be between 0 and 120"); return; }
     setSaving(true);
     const res = await createPatient({
       name: name.trim(),
@@ -188,7 +194,7 @@ export function NewPatientDialog() {
                 >
                   <SelectTrigger
                     id="patient-gender"
-                    className="!h-11 w-full rounded-lg border-border bg-card text-sm"
+                    className="h-11! w-full rounded-lg border-border bg-card text-sm"
                   >
                     <SelectValue />
                   </SelectTrigger>

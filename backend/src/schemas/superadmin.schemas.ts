@@ -83,3 +83,28 @@ export const setBillingStatusBodySchema = z.object({
   plan: z.enum(["trial", "starter", "pro"]).optional(),
 });
 export type SetBillingStatusBody = z.infer<typeof setBillingStatusBodySchema>;
+
+// ── Bulk Operations ───────────────────────────────────────────────────────────
+
+export const bulkClinicActionBodySchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+  action: z.enum(["activate", "suspend", "delete"]),
+});
+export type BulkClinicActionBody = z.infer<typeof bulkClinicActionBodySchema>;
+
+export const bulkPlanChangeBodySchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+  plan: z.enum(["trial", "starter", "pro"]),
+  billingStatus: z.enum(["trial", "active", "unpaid", "cancelled"]),
+});
+export type BulkPlanChangeBody = z.infer<typeof bulkPlanChangeBodySchema>;
+
+// ── Health Scores ─────────────────────────────────────────────────────────────
+
+export const listHealthScoresQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().optional(),
+  risk: z.enum(["all", "low", "medium", "high"]).optional(),
+});
+export type ListHealthScoresQuery = z.infer<typeof listHealthScoresQuerySchema>;

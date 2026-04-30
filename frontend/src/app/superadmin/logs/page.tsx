@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Filter, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   type AuditLogItem,
   type AuditLogsQuery,
 } from "@/services/audit.service";
+import { downloadExport } from "@/services/superadmin.service";
 
 const ACTION_OPTIONS = [
   { value: "all", label: "All actions" },
@@ -98,11 +99,16 @@ export default function AuditLogsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {total.toLocaleString()} total events across all clinics
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {total.toLocaleString()} total events across all clinics
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => downloadExport("audit-logs")} className="h-8 gap-1.5 text-xs">
+          <Download className="size-3.5" />Export CSV
+        </Button>
       </div>
 
       {/* Filters */}

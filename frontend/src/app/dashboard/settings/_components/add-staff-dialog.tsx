@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/select";
 import type { TeamRole } from "@/lib/dashboard-content";
 import { useI18n } from "@/lib/i18n/provider";
+import { isValidEmail } from "@/lib/validation";
+import { toast } from "sonner";
 
 const fieldClass =
   "h-10 rounded-lg border-border bg-card text-sm focus-visible:ring-brand/40";
@@ -66,7 +68,11 @@ export function AddStaffDialog({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim() || !email.trim() || !password.trim()) return;
+    if (!name.trim() || !email.trim() || !password.trim()) { toast.error("Name, email and password are required"); return; }
+    if (name.trim().length < 2) { toast.error("Name must be at least 2 characters"); return; }
+    if (!isValidEmail(email)) { toast.error("Enter a valid email address"); return; }
+    if (password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    if (typeof fee === "number" && fee < 0) { toast.error("Consultation fee cannot be negative"); return; }
     onCreate({
       name: name.trim(),
       role,
@@ -130,7 +136,7 @@ export function AddStaffDialog({
               >
                 <SelectTrigger
                   id="staff-role"
-                  className="!h-10 w-full rounded-lg border-border bg-card text-sm"
+                  className="h-10! w-full rounded-lg border-border bg-card text-sm"
                 >
                   <SelectValue />
                 </SelectTrigger>

@@ -17,28 +17,25 @@ export default function SuperAdminLayout({ children }: { children: ReactNode }) 
                 <p className="text-[11px] text-muted-foreground">Platform control panel</p>
               </div>
             </div>
-            <nav className="flex items-center gap-3 text-[13px] text-muted-foreground">
-              <a href="/superadmin" className="transition-colors hover:text-foreground">
-                Overview
-              </a>
-              <a href="/superadmin/clinics" className="transition-colors hover:text-foreground">
-                Clinics
-              </a>
-              <a href="/superadmin/users" className="transition-colors hover:text-foreground">
-                Users
-              </a>
-              <a href="/superadmin/analytics" className="transition-colors hover:text-foreground">
-                Analytics
-              </a>
-              <a href="/superadmin/config" className="transition-colors hover:text-foreground">
-                Config
-              </a>
-              <a href="/superadmin/billing" className="transition-colors hover:text-foreground">
-                Billing
-              </a>
-              <a href="/superadmin/logs" className="transition-colors hover:text-foreground">
-                Audit Logs
-              </a>
+            <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+              <a href="/superadmin" className="transition-colors hover:text-foreground">Overview</a>
+              <a href="/superadmin/clinics" className="transition-colors hover:text-foreground">Clinics</a>
+              <a href="/superadmin/users" className="transition-colors hover:text-foreground">Users</a>
+              <a href="/superadmin/analytics" className="transition-colors hover:text-foreground">Analytics</a>
+              <a href="/superadmin/financial" className="transition-colors hover:text-foreground">Financial</a>
+              <a href="/superadmin/health" className="transition-colors hover:text-foreground">Health</a>
+              <a href="/superadmin/billing" className="transition-colors hover:text-foreground">Billing</a>
+              <a href="/superadmin/payments" className="transition-colors hover:text-foreground">Payments</a>
+              <a href="/superadmin/onboarding" className="transition-colors hover:text-foreground">Onboarding</a>
+              <a href="/superadmin/tickets" className="transition-colors hover:text-foreground">Tickets</a>
+              <a href="/superadmin/broadcasts" className="transition-colors hover:text-foreground">Broadcasts</a>
+              <a href="/superadmin/admins" className="transition-colors hover:text-foreground">Admins</a>
+              <a href="/superadmin/gdpr" className="transition-colors hover:text-foreground">GDPR</a>
+              <a href="/superadmin/system-health" className="transition-colors hover:text-foreground">Sys Health</a>
+              <a href="/superadmin/api-usage" className="transition-colors hover:text-foreground">API Usage</a>
+              <a href="/superadmin/custom-plans" className="transition-colors hover:text-foreground">Custom Plans</a>
+              <a href="/superadmin/config" className="transition-colors hover:text-foreground">Config</a>
+              <a href="/superadmin/logs" className="transition-colors hover:text-foreground">Audit Logs</a>
               <SuperAdminLogoutButton />
             </nav>
           </div>
