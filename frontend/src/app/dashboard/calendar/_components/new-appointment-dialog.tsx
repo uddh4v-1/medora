@@ -56,6 +56,7 @@ type Props = {
   appointments?: Appointment[];
   defaultTime?: string | null;
   day?: Date;
+  slotMinutes?: number;
   onCreate?: (input: NewAppointmentFormInput) => void;
 };
 
@@ -65,6 +66,7 @@ export function NewAppointmentDialog({
   appointments = [],
   defaultTime,
   day: scheduleDay = new Date(),
+  slotMinutes = 30,
   onCreate,
 }: Props) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -82,8 +84,8 @@ export function NewAppointmentDialog({
   );
 
   const availableSlots = useMemo(
-    () => getAvailableSlots(appointments),
-    [appointments],
+    () => getAvailableSlots(appointments, slotMinutes),
+    [appointments, slotMinutes],
   );
 
   const [patientId, setPatientId] = useState("");
@@ -127,7 +129,7 @@ export function NewAppointmentDialog({
       doctorName: doctor?.name ?? "Unassigned",
       reason: reason.trim() || "Consultation",
       startTime: slot,
-      endTime: addMinutes(slot, 30),
+      endTime: addMinutes(slot, slotMinutes),
     });
     reset();
     setOpen(false);

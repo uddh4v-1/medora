@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { useClinicStore } from "@/stores/clinic-store";
+import { useOnboardingStore } from "@/stores/onboarding-store";
 import { createAppointment } from "@/services/appointments.service";
 import type { AppointmentStatus } from "@/lib/dashboard-content";
 
@@ -25,6 +26,7 @@ type NewAppointmentFormInput = {
 export function CalendarView({ initialDate }: { initialDate: string }) {
   const appointments = useClinicStore((s) => s.appointments);
   const addAppointment = useClinicStore((s) => s.addAppointment);
+  const slotMinutes = useOnboardingStore((s) => s.slotMinutes);
 
   const [day, setDay] = useState(() => new Date(`${initialDate}T00:00:00`));
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -91,6 +93,7 @@ export function CalendarView({ initialDate }: { initialDate: string }) {
               appointments={sorted}
               defaultTime={defaultTime}
               day={day}
+              slotMinutes={slotMinutes}
               onCreate={handleCreate}
             />
           </>
@@ -101,6 +104,7 @@ export function CalendarView({ initialDate }: { initialDate: string }) {
         visitDate={day}
         appointments={sorted}
         onPickSlot={openNewAt}
+        slotMinutes={slotMinutes}
       />
     </div>
   );

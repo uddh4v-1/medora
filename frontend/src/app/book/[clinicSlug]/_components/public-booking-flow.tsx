@@ -12,6 +12,7 @@ import {
   Check,
   ChevronRight,
   Clock,
+  Loader2,
   MapPin,
   Phone,
   Stethoscope,
@@ -24,13 +25,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  addMinutes,
-  calendarSlots,
-  currentClinic,
+  generateCalendarSlots,
   format12h,
-  type Patient,
 } from "@/lib/dashboard-content";
-import { useClinicStore, useHydrated } from "@/stores/clinic-store";
+import type { PublicClinic } from "@/services/discover.service";
+import { createPublicBookingAppointment } from "@/services/discover.service";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -51,7 +50,6 @@ function prettyDate(date: Date) {
   });
 }
 
-/** Inline calendar card — full visibility on mobile/desktop (no cramped popover). */
 function BookingCalendarCard({
   date,
   bookingWindow,
@@ -79,7 +77,7 @@ function BookingCalendarCard({
                 Appointment date
               </p>
               <p className="mt-1 text-xs text-muted-foreground sm:text-[13px]">
-                Use ← → beside the month to browse. Dates before today aren’t
+                Use ← → beside the month to browse. Dates before today aren't
                 available.
               </p>
             </div>
@@ -123,7 +121,6 @@ function BookingCalendarCard({
               className="w-full bg-transparent p-3 [--cell-size:2.75rem]"
               buttonVariant="outline"
               classNames={{
-                /** With navLayout="around": [prev][caption][next] — avoid flex-col + caption w-full (huge gaps). */
                 month: cn(
                   "!flex w-full max-w-none flex-row flex-wrap items-center justify-center gap-x-1.5 gap-y-5 !px-0 [&>[role=grid]]:mt-1 [&>[role=grid]]:w-full [&>[role=grid]]:basis-full",
                 ),
@@ -172,27 +169,15 @@ function BookingCalendarCard({
   );
 }
 
-export function PublicBookingFlow() {
-  const hydrated = useHydrated();
-
-  const teamMembers = useClinicStore((s) => s.teamMembers);
-  const appointments = useClinicStore((s) => s.appointments);
-  const patients = useClinicStore((s) => s.patients);
-  const addAppointment = useClinicStore((s) => s.addAppointment);
-  const addPatient = useClinicStore((s) => s.addPatient);
-
-  const doctors = useMemo(
-    () => teamMembers.filter((m) => m.role === "Doctor"),
-    [teamMembers],
-  );
-
+export function PublicBookingFlow({ clinic }: { clinic: PublicClinic }) {
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [slot, setSlot] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
-  const [confirmedId, setConfirmedId] = useState<string | null>(null);
+  const [confirmedName, setConfirmedName] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const step: Step = !doctorId
     ? 1
@@ -200,29 +185,14 @@ export function PublicBookingFlow() {
       ? 2
       : !slot
         ? 3
-        : !confirmedId
+        : !confirmedName
           ? 4
           : 5;
 
   const selectedDoctor = useMemo(
-    () => doctors.find((d) => d.id === doctorId) ?? null,
-    [doctors, doctorId],
+    () => clinic.doctors.find((d) => d.id === doctorId) ?? null,
+    [clinic.doctors, doctorId],
   );
-
-  const occupied = useMemo(() => {
-    if (!selectedDoctor) return new Set<string>();
-    const taken = new Set<string>();
-    appointments
-      .filter((a) => a.doctor === selectedDoctor.name)
-      .forEach((a) => {
-        let cur = a.startTime;
-        while (cur < a.endTime) {
-          taken.add(cur);
-          cur = addMinutes(cur, 30);
-        }
-      });
-    return taken;
-  }, [appointments, selectedDoctor]);
 
   const bookingWindow = useMemo(() => {
     const today = startOfDay(new Date());
@@ -234,7 +204,7 @@ export function PublicBookingFlow() {
     const morning: string[] = [];
     const afternoon: string[] = [];
     const evening: string[] = [];
-    calendarSlots.forEach((s) => {
+    generateCalendarSlots(30).forEach((s) => {
       const h = Number(s.split(":")[0]);
       if (h < 12) morning.push(s);
       else if (h < 17) afternoon.push(s);
@@ -243,47 +213,42 @@ export function PublicBookingFlow() {
     return { morning, afternoon, evening };
   }, []);
 
-  function handleConfirm(e: React.FormEvent<HTMLFormElement>) {
+  async function handleConfirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!selectedDoctor || !date || !slot || !name.trim() || !phone.trim())
-      return;
+    if (!selectedDoctor || !date || !slot || !name.trim() || !phone.trim()) return;
 
     const cleanName = name.trim();
     const cleanPhone = phone.trim();
 
-    const existing = patients.find(
-      (p) => p.phone === cleanPhone || p.name.toLowerCase() === cleanName.toLowerCase(),
-    );
-    if (!existing) {
-      const newPatient: Patient = {
-        id:
-          typeof crypto !== "undefined" && "randomUUID" in crypto
-            ? crypto.randomUUID()
-            : `p-${Date.now()}`,
-        name: cleanName,
-        phone: cleanPhone,
-        age: null,
-        gender: null,
-      };
-      addPatient(newPatient);
+    const [y, mo, d] = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ];
+    const dateStr = `${y}-${mo}-${d}`;
+
+    const [startH, startM] = slot.split(":").map(Number);
+    const endMin = startH * 60 + startM + 30;
+    const endTime = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+
+    setSubmitting(true);
+    const result = await createPublicBookingAppointment(clinic.slug, {
+      name: cleanName,
+      phone: cleanPhone,
+      reason: reason.trim() || undefined,
+      doctorId: selectedDoctor.id,
+      date: dateStr,
+      startTime: slot,
+      endTime,
+    });
+    setSubmitting(false);
+
+    if (!result) {
+      toast.error("Booking failed", { description: "Please try again or call us directly." });
+      return;
     }
 
-    const id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `apt-${Date.now()}`;
-
-    addAppointment({
-      id,
-      patient: cleanName,
-      doctor: selectedDoctor.name,
-      reason: reason.trim() || "Online booking",
-      startTime: slot,
-      endTime: addMinutes(slot, 30),
-      status: "scheduled",
-    });
-
-    setConfirmedId(id);
+    setConfirmedName(cleanName);
     toast.success("Appointment requested", { description: cleanName });
   }
 
@@ -294,15 +259,7 @@ export function PublicBookingFlow() {
     setName("");
     setPhone("");
     setReason("");
-    setConfirmedId(null);
-  }
-
-  if (!hydrated) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Loading…
-      </div>
-    );
+    setConfirmedName(null);
   }
 
   return (
@@ -315,7 +272,7 @@ export function PublicBookingFlow() {
             </span>
             <div className="leading-tight">
               <p className="text-base font-semibold text-foreground">
-                {currentClinic.name}
+                {clinic.name}
               </p>
               <p className="text-xs text-muted-foreground">
                 Book an appointment online
@@ -325,12 +282,14 @@ export function PublicBookingFlow() {
           <div className="hidden flex-col items-end text-right text-xs text-muted-foreground sm:flex">
             <span className="inline-flex items-center gap-1.5">
               <Phone className="size-3.5" />
-              {currentClinic.phone}
+              {clinic.phone}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin className="size-3.5" />
-              {currentClinic.address}
-            </span>
+            {clinic.address && (
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="size-3.5" />
+                {clinic.address}
+              </span>
+            )}
           </div>
         </div>
       </header>
@@ -340,9 +299,9 @@ export function PublicBookingFlow() {
           <Stepper step={step} />
         ) : null}
 
-        {step === 5 && confirmedId && selectedDoctor && date && slot ? (
+        {step === 5 && confirmedName && selectedDoctor && date && slot ? (
           <ConfirmationCard
-            patientName={name}
+            patientName={confirmedName}
             doctor={selectedDoctor.name}
             date={prettyDate(date)}
             slot={slot}
@@ -358,12 +317,12 @@ export function PublicBookingFlow() {
                 done={step > 1}
               >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {doctors.length === 0 ? (
+                  {clinic.doctors.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No doctors available right now.
                     </p>
                   ) : (
-                    doctors.map((d) => {
+                    clinic.doctors.map((d) => {
                       const active = doctorId === d.id;
                       return (
                         <button
@@ -392,14 +351,6 @@ export function PublicBookingFlow() {
                             <span className="text-sm font-semibold text-foreground">
                               {d.name}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {d.specialty ?? "General"}
-                            </span>
-                            {d.fee != null ? (
-                              <span className="mt-0.5 text-[11px] text-muted-foreground">
-                                Consultation fee · ₹{d.fee}
-                              </span>
-                            ) : null}
                           </div>
                           {active ? (
                             <Check className="size-4 text-brand" />
@@ -447,21 +398,17 @@ export function PublicBookingFlow() {
                           </p>
                           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
                             {grouped[period].map((s) => {
-                              const taken = occupied.has(s);
                               const active = slot === s;
                               return (
                                 <button
                                   key={s}
                                   type="button"
-                                  disabled={taken}
                                   onClick={() => setSlot(s)}
                                   className={cn(
                                     "h-9 rounded-md border text-xs font-medium transition-colors",
-                                    taken
-                                      ? "cursor-not-allowed border-border bg-muted/40 text-muted-foreground/60 line-through"
-                                      : active
-                                        ? "border-brand bg-brand text-brand-foreground"
-                                        : "border-border bg-card text-foreground hover:border-brand/40 hover:bg-brand/5",
+                                    active
+                                      ? "border-brand bg-brand text-brand-foreground"
+                                      : "border-border bg-card text-foreground hover:border-brand/40 hover:bg-brand/5",
                                   )}
                                 >
                                   {format12h(s)}
@@ -532,9 +479,14 @@ export function PublicBookingFlow() {
                     <div className="flex justify-end pt-2">
                       <Button
                         type="submit"
+                        disabled={submitting}
                         className="h-10 rounded-lg bg-brand px-5 text-sm font-medium text-brand-foreground shadow-brand hover:bg-brand/90"
                       >
-                        Confirm appointment
+                        {submitting ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          "Confirm appointment"
+                        )}
                       </Button>
                     </div>
                   </form>
@@ -543,7 +495,7 @@ export function PublicBookingFlow() {
             </div>
 
             <SummaryCard
-              clinic={currentClinic.name}
+              clinic={clinic.name}
               doctor={selectedDoctor?.name}
               date={date ? prettyDate(date) : null}
               slot={slot}
@@ -556,7 +508,7 @@ export function PublicBookingFlow() {
       <footer className="border-t border-border bg-card/80">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-6 py-4 text-[11px] text-muted-foreground">
           <p>Powered by Medora</p>
-          <p>Need help? Call {currentClinic.phone}</p>
+          <p>Need help? Call {clinic.phone}</p>
         </div>
       </footer>
     </div>

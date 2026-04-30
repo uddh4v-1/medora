@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 
 import {
   type Appointment,
-  calendarSlots,
+  generateCalendarSlots,
   format12h,
   isSlotOccupied,
 } from "@/lib/dashboard-content";
@@ -16,11 +16,14 @@ export function DaySchedule({
   visitDate,
   appointments,
   onPickSlot,
+  slotMinutes = 30,
 }: {
   visitDate: Date;
   appointments: Appointment[];
   onPickSlot?: (slot: string) => void;
+  slotMinutes?: number;
 }) {
+  const slots = generateCalendarSlots(slotMinutes);
   const startMap = new Map<string, Appointment>();
   for (const a of appointments) {
     startMap.set(a.startTime, a);
@@ -30,11 +33,11 @@ export function DaySchedule({
     <div className="relative rounded-xl border border-border bg-card shadow-card-soft dark:shadow-none">
       <div
         aria-hidden
-        className="pointer-events-none absolute top-0 bottom-0 left-[80px] w-px bg-border/60"
+        className="pointer-events-none absolute top-0 bottom-0 left-20 w-px bg-border/60"
       />
-      {calendarSlots.map((slot, idx) => {
+      {slots.map((slot, idx) => {
         const apt = startMap.get(slot);
-        const isHourMark = slot.endsWith(":00");
+        const isHourMark = slot.endsWith(":00") || slotMinutes >= 60;
         const occupiedByOther = !apt && isSlotOccupied(slot, appointments);
 
         return (

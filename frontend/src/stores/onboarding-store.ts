@@ -94,6 +94,11 @@ export type SignupData = {
 export type ProfileData = {
   logoDataUrl: string | null;
   address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  specialties: string[];
+  description: string;
   gst: string;
   timezone: string;
   workingHours: WorkingHours;
@@ -133,6 +138,11 @@ type OnboardingState = {
   // Step 3 — clinic profile
   logoDataUrl: string | null;
   address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  specialties: string[];
+  description: string;
   gst: string;
   timezone: string;
   workingHours: WorkingHours;
@@ -168,6 +178,11 @@ const initialState = {
   emailVerified: false,
   logoDataUrl: null as string | null,
   address: "",
+  city: "",
+  state: "",
+  pincode: "",
+  specialties: [] as string[],
+  description: "",
   gst: "",
   timezone: "Asia/Kolkata",
   workingHours: DEFAULT_HOURS,

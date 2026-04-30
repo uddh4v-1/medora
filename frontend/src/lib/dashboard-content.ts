@@ -664,14 +664,18 @@ export function nextInvoiceNumber(existing: Invoice[]) {
 
 export const calendarHours = Array.from({ length: 12 }, (_, i) => 8 + i);
 
-export const calendarSlots: string[] = (() => {
+export function generateCalendarSlots(slotMinutes: number): string[] {
   const out: string[] = [];
-  for (let h = 8; h < 20; h++) {
-    out.push(`${h.toString().padStart(2, "0")}:00`);
-    out.push(`${h.toString().padStart(2, "0")}:30`);
+  const totalMinutes = (20 - 8) * 60;
+  const startMinutes = 8 * 60;
+  for (let offset = 0; offset < totalMinutes; offset += slotMinutes) {
+    const total = startMinutes + offset;
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    out.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
   }
   return out;
-})();
+}
 
 export function formatHour24(hour: number) {
   return `${hour.toString().padStart(2, "0")}:00`;
@@ -700,8 +704,10 @@ export function isSlotOccupied(slot: string, appointments: Appointment[]) {
   );
 }
 
-export function getAvailableSlots(appointments: Appointment[]) {
-  return calendarSlots.filter((slot) => !isSlotOccupied(slot, appointments));
+export function getAvailableSlots(appointments: Appointment[], slotMinutes = 30) {
+  return generateCalendarSlots(slotMinutes).filter(
+    (slot) => !isSlotOccupied(slot, appointments),
+  );
 }
 
 export type NewAppointmentInput = {

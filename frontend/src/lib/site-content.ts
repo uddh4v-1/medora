@@ -28,6 +28,7 @@ export type NavLink = {
 export const navLinks: NavLink[] = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
+  { label: "Find a clinic", href: "/find-clinics" },
   { label: "Contact", href: "#contact" },
 ];
 

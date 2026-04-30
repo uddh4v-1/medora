@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import { LogoUploader } from "@/components/onboarding/logo-uploader";
@@ -38,6 +39,11 @@ export default function ProfilePage() {
     useShallow((s) => ({
       logoDataUrl: s.logoDataUrl,
       address: s.address,
+      city: s.city,
+      state: s.state,
+      pincode: s.pincode,
+      specialties: s.specialties,
+      description: s.description,
       gst: s.gst,
       timezone: s.timezone,
       workingHours: s.workingHours,
@@ -48,22 +54,52 @@ export default function ProfilePage() {
 
   const [logoDataUrl, setLogoDataUrl] = useState(profile.logoDataUrl);
   const [address, setAddress] = useState(profile.address);
+  const [city, setCity] = useState(profile.city);
+  const [state, setState] = useState(profile.state);
+  const [pincode, setPincode] = useState(profile.pincode);
+  const [specialties, setSpecialties] = useState<string[]>(profile.specialties);
+  const [specialtyInput, setSpecialtyInput] = useState("");
+  const [description, setDescription] = useState(profile.description);
   const [gst, setGst] = useState(profile.gst);
   const [timezone, setTimezone] = useState(profile.timezone);
   const [workingHours, setWorkingHours] = useState(profile.workingHours);
   const [slotMinutes, setSlotMinutes] = useState(profile.slotMinutes);
 
   const hasOpenDay = Object.values(workingHours).some((d) => d !== null);
-  const valid = address.trim().length >= 4 && hasOpenDay;
+  const valid = address.trim().length >= 4 && city.trim().length >= 2 && hasOpenDay;
+
+  function addSpecialty() {
+    const val = specialtyInput.trim();
+    if (val && !specialties.includes(val)) {
+      setSpecialties([...specialties, val]);
+    }
+    setSpecialtyInput("");
+  }
+
+  function handleSpecialtyKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addSpecialty();
+    }
+  }
+
+  function removeSpecialty(s: string) {
+    setSpecialties(specialties.filter((x) => x !== s));
+  }
 
   function handleContinue() {
     if (!valid) {
-      toast.error("Add a clinic address and at least one open day.");
+      toast.error("Add a clinic address, city, and at least one open day.");
       return;
     }
     setProfile({
       logoDataUrl,
       address: address.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: pincode.trim(),
+      specialties,
+      description: description.trim(),
       gst: gst.trim(),
       timezone,
       workingHours,
@@ -82,8 +118,7 @@ export default function ProfilePage() {
           Tell us about your clinic
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          This is what patients see when they book. You can change it anytime
-          from Settings.
+          This is what patients see when they search for clinics. You can change it anytime from Settings.
         </p>
       </header>
 
@@ -102,8 +137,87 @@ export default function ProfilePage() {
                 rows={2}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="12, MG Road, Bangalore 560001"
-                className="min-h-[68px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                placeholder="12, MG Road"
+                className="min-h-17 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Bangalore"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  placeholder="Karnataka"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="pincode">Pincode</Label>
+                <Input
+                  id="pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  placeholder="560001"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="specialties">
+                Specialties{" "}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <div className="flex flex-wrap gap-2 mb-1">
+                {specialties.map((s) => (
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-medium text-brand"
+                  >
+                    {s}
+                    <button
+                      type="button"
+                      onClick={() => removeSpecialty(s)}
+                      className="ml-0.5 rounded-full hover:text-brand/70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <Input
+                id="specialties"
+                value={specialtyInput}
+                onChange={(e) => setSpecialtyInput(e.target.value)}
+                onKeyDown={handleSpecialtyKey}
+                onBlur={addSpecialty}
+                placeholder="e.g. Cardiology — press Enter to add"
+              />
+              <p className="text-[11px] text-muted-foreground">Press Enter or comma to add each specialty.</p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="description">
+                About your clinic{" "}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <textarea
+                id="description"
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="A short description patients will see when searching for clinics near them."
+                className="min-h-17 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
             </div>
 

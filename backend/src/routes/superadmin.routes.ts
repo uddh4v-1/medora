@@ -24,6 +24,9 @@ import {
 
 export const superadminRouter = Router();
 
+// Must be before requireSuperAdmin — during impersonation the JWT role is "Owner", not "SuperAdmin"
+superadminRouter.post("/exit-impersonation", asyncHandler(exitImpersonationHandler));
+
 superadminRouter.use(requireSuperAdmin);
 
 superadminRouter.get("/clinics", asyncHandler(listClinicsHandler));
@@ -37,7 +40,6 @@ superadminRouter.post("/users/:id/force-reset", asyncHandler(forcePasswordResetH
 superadminRouter.patch("/users/:id/verify-email", asyncHandler(verifyUserEmailHandler));
 
 superadminRouter.post("/clinics/:id/impersonate", asyncHandler(impersonateClinicHandler));
-superadminRouter.post("/exit-impersonation", asyncHandler(exitImpersonationHandler));
 
 superadminRouter.get("/analytics", asyncHandler(getAnalyticsHandler));
 

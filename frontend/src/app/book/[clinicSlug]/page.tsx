@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { currentClinic } from "@/lib/dashboard-content";
+import { getClinicBySlug } from "@/services/discover.service";
 
 import { PublicBookingFlow } from "./_components/public-booking-flow";
 
@@ -17,8 +17,7 @@ export default async function PublicBookingPage({
   params: Promise<{ clinicSlug: string }>;
 }) {
   const { clinicSlug } = await params;
-  if (clinicSlug !== currentClinic.slug) {
-    notFound();
-  }
-  return <PublicBookingFlow />;
+  const clinic = await getClinicBySlug(clinicSlug);
+  if (!clinic) notFound();
+  return <PublicBookingFlow clinic={clinic} />;
 }

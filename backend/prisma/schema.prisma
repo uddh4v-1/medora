@@ -29,13 +29,19 @@ enum UserStatus {
 }
 
 model Clinic {
-  id        String       @id @default(cuid())
-  name      String       @db.Text
-  slug      String       @unique @db.VarChar(60)
-  phone     String       @db.VarChar(24)
-  status    ClinicStatus @default(active)
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  id          String       @id @default(cuid())
+  name        String       @db.Text
+  slug        String       @unique @db.VarChar(60)
+  phone       String       @db.VarChar(24)
+  status      ClinicStatus @default(active)
+  address     String?      @db.Text
+  city        String?      @db.VarChar(100)
+  state       String?      @db.VarChar(100)
+  pincode     String?      @db.VarChar(20)
+  specialties String[]     @default([])
+  description String?      @db.Text
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
   patients      Patient[]
   visits        Visit[]
   appointments  Appointment[]
@@ -45,6 +51,7 @@ model Clinic {
 
   featureFlags  ClinicFeatureFlags?
   subscription  ClinicSubscription?
+  broadcasts    Broadcast[]
 
   @@map("clinics")
 }
@@ -294,6 +301,24 @@ model PlatformConfig {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("platform_config")
+}
+
+// ── Broadcasts ────────────────────────────────────────────────────────────────
+
+model Broadcast {
+  id             String   @id @default(cuid())
+  clinicId       String   @map("clinic_id")
+  clinic         Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  userId         String?  @map("user_id")
+  audience       String   @db.VarChar(32)
+  kind           String   @db.VarChar(32)
+  title          String   @db.Text
+  body           String   @db.Text
+  recipientCount Int      @map("recipient_count")
+  sentAt         DateTime @default(now()) @map("sent_at")
+
+  @@index([clinicId, sentAt])
+  @@map("broadcasts")
 }
 
 // ── Billing ───────────────────────────────────────────────────────────────────

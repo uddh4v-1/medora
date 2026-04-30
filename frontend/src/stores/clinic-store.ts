@@ -84,7 +84,7 @@ type ClinicState = {
   clinicProfile: ClinicResponse | null;
 
   setClinicProfile: (profile: ClinicResponse) => void;
-  updateClinicProfile: (patch: Partial<Pick<ClinicResponse, "name" | "phone">>) => void;
+  updateClinicProfile: (patch: Partial<ClinicResponse>) => void;
 
   signIn: (s: Session) => void;
   signOut: () => void;

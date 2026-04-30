@@ -14,6 +14,8 @@ import { teamRouter } from "./team.routes";
 import { clinicRouter } from "./clinic.routes";
 import { auditRouter } from "./audit.routes";
 import { superadminRouter } from "./superadmin.routes";
+import { discoverRouter } from "./discover.routes";
+import { notificationsRouter } from "./notifications.routes";
 
 export const apiRouter = Router();
 
@@ -37,6 +39,7 @@ apiRouter.get("/", (_req, res) => {
 
 apiRouter.use("/health", healthRouter);
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/discover", discoverRouter);
 
 apiRouter.use("/dashboard", requireAuth, auditMiddleware, dashboardRouter);
 apiRouter.use("/patients", requireAuth, auditMiddleware, patientsRouter);
@@ -47,4 +50,5 @@ apiRouter.use("/invoices", requireAuth, auditMiddleware, invoicesRouter);
 apiRouter.use("/team", requireAuth, auditMiddleware, teamRouter);
 apiRouter.use("/clinic", requireAuth, auditMiddleware, clinicRouter);
 apiRouter.use("/audit", requireAuth, auditRouter);
+apiRouter.use("/notifications", requireAuth, auditMiddleware, notificationsRouter);
 apiRouter.use("/superadmin", requireAuth, superadminRouter);

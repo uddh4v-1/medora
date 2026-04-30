@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, CalendarRange, Loader2, Megaphone, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,11 @@ import {
 import type { OutreachKind } from "@/stores/clinic-store";
 import { useClinicStore } from "@/stores/clinic-store";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  getBroadcasts,
+  postBroadcast,
+  type BroadcastRecord,
+} from "@/services/notifications.service";
 
 function fmtShort(iso: string, bcp47: string) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -56,14 +61,19 @@ const audienceMeta: Record<
 export default function NotificationsPage() {
   const { t, bcp47 } = useI18n();
   const patients = useClinicStore((s) => s.patients);
-  const recordBroadcast = useClinicStore((s) => s.recordBroadcast);
-  const history = useClinicStore((s) => s.broadcastHistory);
 
   const [audience, setAudience] = useState<NotificationAudience>("this_week");
   const [kind, setKind] = useState<OutreachKind>("visit_reminder");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [history, setHistory] = useState<BroadcastRecord[]>([]);
+
+  useEffect(() => {
+    getBroadcasts().then((res) => {
+      if (res.ok) setHistory(res.data.broadcasts);
+    });
+  }, []);
 
   const now = useMemo(() => new Date(), []);
   const weekLo = toIsoDate(startOfWeekMonday(now));
@@ -91,26 +101,27 @@ export default function NotificationsPage() {
     return t("notifications.kindCustom");
   }
 
-  function handleSend() {
+  async function handleSend() {
     if (!canSend) return;
     setSending(true);
-    window.setTimeout(() => {
-      recordBroadcast({
-        audience,
-        kind,
-        title: title.trim(),
-        body: body.trim(),
-        recipientCount: recipients.length,
-      });
-      toast.success(t("notifications.toastSent"), {
-        description: t("notifications.toastSentDesc", {
-          count: recipients.length,
-        }),
-      });
-      setTitle("");
-      setBody("");
-      setSending(false);
-    }, 400);
+    const res = await postBroadcast({
+      audience,
+      kind,
+      title: title.trim(),
+      body: body.trim(),
+      recipientCount: recipients.length,
+    });
+    setSending(false);
+    if (!res.ok) {
+      toast.error("Failed to send broadcast");
+      return;
+    }
+    setHistory((prev) => [res.data.broadcast, ...prev]);
+    toast.success(t("notifications.toastSent"), {
+      description: t("notifications.toastSentDesc", { count: recipients.length }),
+    });
+    setTitle("");
+    setBody("");
   }
 
   return (
@@ -312,10 +323,10 @@ export default function NotificationsPage() {
                         })}
                       </td>
                       <td className="px-3 py-2.5">
-                        {audienceLabel(row.audience)}
+                        {audienceLabel(row.audience as NotificationAudience)}
                       </td>
                       <td className="px-3 py-2.5 text-muted-foreground">
-                        {kindLabel(row.kind)}
+                        {kindLabel(row.kind as OutreachKind)}
                       </td>
                       <td className="max-w-[200px] truncate px-3 py-2.5 font-medium">
                         {row.title}
