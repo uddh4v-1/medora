@@ -84,7 +84,10 @@ export async function postRegister(req: Request, res: Response): Promise<void> {
 export async function getMe(req: Request, res: Response): Promise<void> {
   const user = await findUserById(req.auth!.userId);
   if (!user) throw new HttpError(401, "User not found", "USER_NOT_FOUND");
-  res.status(200).json({ user });
+  const responseUser: typeof user = req.auth!.isImpersonation
+    ? { ...user, isImpersonating: true, impersonatedBy: req.auth!.impersonatedBy }
+    : user;
+  res.status(200).json({ user: responseUser });
 }
 
 export async function postRefreshToken(req: Request, res: Response): Promise<void> {

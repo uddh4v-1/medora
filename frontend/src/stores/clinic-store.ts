@@ -22,6 +22,7 @@ import {
 } from "@/lib/dashboard-content";
 import type { NotificationAudience } from "@/lib/notification-segments";
 import type { ClinicSummary } from "@/services/types/auth.types";
+import type { ClinicResponse } from "@/services/clinic.service";
 
 export type Notification = {
   id: string;
@@ -41,6 +42,7 @@ export type Session = {
   name?: string;
   /** From `AuthUser.clinic` on login, register, and `GET /api/auth/me` */
   clinic?: ClinicSummary | null;
+  isImpersonating?: boolean;
 };
 
 export type OutreachKind = "visit_reminder" | "festival_offer" | "custom";
@@ -77,6 +79,12 @@ type ClinicState = {
 
   /** Accurate counts from the server overview — use these for stat cards. */
   overviewStats: OverviewStats | null;
+
+  /** Full clinic profile from GET /api/clinic — superset of session.clinic. */
+  clinicProfile: ClinicResponse | null;
+
+  setClinicProfile: (profile: ClinicResponse) => void;
+  updateClinicProfile: (patch: Partial<Pick<ClinicResponse, "name" | "phone">>) => void;
 
   signIn: (s: Session) => void;
   signOut: () => void;
@@ -128,12 +136,19 @@ const initialState = {
   notificationsRead: [] as string[],
   broadcastHistory: [] as PatientBroadcastRecord[],
   overviewStats: null as OverviewStats | null,
+  clinicProfile: null as ClinicResponse | null,
 };
 
 export const useClinicStore = create<ClinicState>()(
   persist(
     (set) => ({
       ...initialState,
+
+      setClinicProfile: (profile) => set({ clinicProfile: profile }),
+      updateClinicProfile: (patch) =>
+        set((s) => ({
+          clinicProfile: s.clinicProfile ? { ...s.clinicProfile, ...patch } : s.clinicProfile,
+        })),
 
       signIn: (session) => set({ session }),
       signOut: () => set({ session: null }),
@@ -219,7 +234,7 @@ export const useClinicStore = create<ClinicState>()(
     }),
     {
       name: "medora-clinic-store",
-      version: 4,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       migrate: (persisted, version) => {
         if (persisted === null || typeof persisted !== "object") {
@@ -236,6 +251,12 @@ export const useClinicStore = create<ClinicState>()(
         }
         if (version < 4) {
           return { ...s, overviewStats: null };
+        }
+        if (version < 5) {
+          return { ...s, clinicProfile: null };
+        }
+        if (version < 6) {
+          return s;
         }
         return persisted;
       },

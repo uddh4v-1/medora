@@ -87,6 +87,7 @@ export function useDashboardSession() {
       initials: initialsFromName(session?.name),
       roleLabel: session?.role ?? currentUser.role,
       email: session?.email ?? null,
+      isImpersonating: session?.isImpersonating ?? false,
     }),
     [session],
   );

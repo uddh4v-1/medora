@@ -21,6 +21,7 @@ import { getPrescriptions } from "@/services/prescriptions.service";
 import { getTeamMembers } from "@/services/team.service";
 import { useClinicStore } from "@/stores/clinic-store";
 import { getMe } from "@/services/auth.service";
+import { getClinic } from "@/services/clinic.service";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 
 type Props = { children: React.ReactNode };
@@ -30,6 +31,7 @@ export function DashboardSessionSync({ children }: Props) {
   const signIn = useClinicStore((s) => s.signIn);
   const signOut = useClinicStore((s) => s.signOut);
   const hydrateDashboardData = useClinicStore((s) => s.hydrateDashboardData);
+  const setClinicProfile = useClinicStore((s) => s.setClinicProfile);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -188,8 +190,8 @@ export function DashboardSessionSync({ children }: Props) {
           data.user.role &&
           typeof data.user.id === "string"
         ) {
-          // SuperAdmin has no clinic — send them to their own dashboard
-          if (data.user.role === "SuperAdmin") {
+          // SuperAdmin has no clinic — send them to their own dashboard (unless impersonating a clinic)
+          if (data.user.role === "SuperAdmin" && !data.user.isImpersonating) {
             router.replace("/superadmin");
             return;
           }
@@ -201,9 +203,10 @@ export function DashboardSessionSync({ children }: Props) {
             userId: data.user.id,
             name: data.user.name ?? "",
             clinic: data.user.clinic ?? null,
+            isImpersonating: data.user.isImpersonating ?? false,
           });
 
-          const [overviewRes, patientsRes, queueRes, invoicesRes, rxRes, teamRes] =
+          const [overviewRes, patientsRes, queueRes, invoicesRes, rxRes, teamRes, clinicRes] =
             await Promise.all([
               getDashboardOverview(),
               getDashboardPatients({ page: 1, limit: 100 }),
@@ -211,9 +214,12 @@ export function DashboardSessionSync({ children }: Props) {
               getDashboardInvoices({ page: 1, limit: 100 }),
               getPrescriptions({ page: 1, limit: 100 }),
               getTeamMembers(),
+              getClinic(),
             ]);
 
           if (!cancelled) {
+            if (clinicRes.ok) setClinicProfile(clinicRes.data);
+
             const patients: Patient[] = patientsRes.ok
               ? patientsRes.data.items.map((p) => ({
                   id: p.id,
@@ -278,7 +284,7 @@ export function DashboardSessionSync({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [hydrateDashboardData, router, signIn, signOut]);
+  }, [hydrateDashboardData, router, signIn, signOut, setClinicProfile]);
 
   if (!ready) {
     return <DashboardSkeleton />;

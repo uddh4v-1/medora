@@ -21,6 +21,7 @@ export function DashboardSidebar() {
   const {
     session,
     clinicName,
+    clinicSlug,
     displayName,
     roleLabel,
     initials,
@@ -42,7 +43,7 @@ export function DashboardSidebar() {
     <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar md:flex md:flex-col">
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
         <span className="flex size-9 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-brand">
-          <Stethoscope className="size-[18px]" />
+          <Stethoscope className="size-4.5" />
         </span>
         <div className="flex flex-col leading-tight">
           <span className="text-[15px] font-semibold text-sidebar-foreground">
@@ -81,7 +82,15 @@ export function DashboardSidebar() {
       <div className="flex flex-col gap-2 border-t border-sidebar-border px-3 py-3">
         <Button
           variant="outline"
-          className="h-9 justify-start gap-2 rounded-md border-sidebar-border bg-transparent px-3 text-xs font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          disabled={!clinicSlug}
+          onClick={() => {
+            if (!clinicSlug) return;
+            const url = `${window.location.origin}/book/${clinicSlug}`;
+            navigator.clipboard?.writeText(url).then(() =>
+              toast.success("Booking link copied"),
+            );
+          }}
+          className="h-9 justify-start gap-2 rounded-md border-sidebar-border bg-transparent px-3 text-xs font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-40"
         >
           <Link2 className="size-3.5" />
           {t("sidebar.bookingLink")}

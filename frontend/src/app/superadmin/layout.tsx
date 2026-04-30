@@ -17,9 +17,24 @@ export default function SuperAdminLayout({ children }: { children: ReactNode }) 
                 <p className="text-[11px] text-muted-foreground">Platform control panel</p>
               </div>
             </div>
-            <nav className="flex items-center gap-4 text-sm text-muted-foreground">
+            <nav className="flex items-center gap-3 text-[13px] text-muted-foreground">
               <a href="/superadmin" className="transition-colors hover:text-foreground">
                 Overview
+              </a>
+              <a href="/superadmin/clinics" className="transition-colors hover:text-foreground">
+                Clinics
+              </a>
+              <a href="/superadmin/users" className="transition-colors hover:text-foreground">
+                Users
+              </a>
+              <a href="/superadmin/analytics" className="transition-colors hover:text-foreground">
+                Analytics
+              </a>
+              <a href="/superadmin/config" className="transition-colors hover:text-foreground">
+                Config
+              </a>
+              <a href="/superadmin/billing" className="transition-colors hover:text-foreground">
+                Billing
               </a>
               <a href="/superadmin/logs" className="transition-colors hover:text-foreground">
                 Audit Logs

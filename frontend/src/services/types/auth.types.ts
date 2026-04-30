@@ -20,6 +20,8 @@ export interface AuthUser {
   role: UserRole;
   emailVerified: boolean;
   clinic: ClinicSummary | null;
+  isImpersonating?: boolean;
+  impersonatedBy?: string;
 }
 
 /** Payload after successful login or register (`user` + signed-in timestamp). */

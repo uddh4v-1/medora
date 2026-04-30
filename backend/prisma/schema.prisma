@@ -18,20 +18,33 @@ enum UserRole {
   SuperAdmin
 }
 
+enum ClinicStatus {
+  active
+  suspended
+}
+
+enum UserStatus {
+  active
+  suspended
+}
+
 model Clinic {
-  id        String   @id @default(cuid())
-  name      String   @db.Text
-  slug      String   @unique @db.VarChar(60)
-  phone     String   @db.VarChar(24)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String       @id @default(cuid())
+  name      String       @db.Text
+  slug      String       @unique @db.VarChar(60)
+  phone     String       @db.VarChar(24)
+  status    ClinicStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
   patients      Patient[]
   visits        Visit[]
   appointments  Appointment[]
   prescriptions Prescription[]
   invoices      Invoice[]
+  users         User[]
 
-  users User[]
+  featureFlags  ClinicFeatureFlags?
+  subscription  ClinicSubscription?
 
   @@map("clinics")
 }
@@ -41,8 +54,9 @@ model User {
   email        String   @unique @db.Text
   passwordHash String   @map("password_hash")
   name         String   @default("") @db.Text
-  role         UserRole @default(Owner)
-  clinicId     String?  @map("clinic_id")
+  role         UserRole   @default(Owner)
+  status       UserStatus @default(active)
+  clinicId     String?    @map("clinic_id")
   clinic       Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -257,4 +271,44 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ── Feature Flags ──────────────────────────────────────────────────────────────
+
+model ClinicFeatureFlags {
+  id                    String   @id @default(cuid())
+  clinicId              String   @unique @map("clinic_id")
+  clinic                Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  publicBooking         Boolean  @default(true) @map("public_booking")
+  whatsappNotifications Boolean  @default(false) @map("whatsapp_notifications")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("clinic_feature_flags")
+}
+
+model PlatformConfig {
+  id              String   @id @default(cuid())
+  maintenanceMode Boolean  @default(false) @map("maintenance_mode")
+  bannerMessage   String?  @db.Text @map("banner_message")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_config")
+}
+
+// ── Billing ───────────────────────────────────────────────────────────────────
+
+model ClinicSubscription {
+  id                 String    @id @default(cuid())
+  clinicId           String    @unique @map("clinic_id")
+  clinic             Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  plan               String    @default("trial") @db.VarChar(32)
+  billingStatus      String    @default("trial") @map("billing_status") @db.VarChar(32)
+  trialEndsAt        DateTime? @map("trial_ends_at")
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@map("clinic_subscriptions")
 }

@@ -16,6 +16,8 @@ export type AuthUser = {
   role: "Owner" | "Doctor" | "Receptionist" | "SuperAdmin";
   emailVerified: boolean;
   clinic: { id: string; name: string; slug: string } | null;
+  isImpersonating?: boolean;
+  impersonatedBy?: string;
 };
 
 export type JwtAccessPayload = jwt.JwtPayload & {
@@ -23,7 +25,11 @@ export type JwtAccessPayload = jwt.JwtPayload & {
   email: string;
   role: AuthUser["role"];
   clinicId?: string;
+  isImpersonation?: boolean;
+  impersonatedBy?: string;
 };
+
+export const IMPERSONATION_COOKIE_NAME = "medora_impersonation";
 
 /** Hash a password for storage (e.g. seed or register later). */
 export async function hashPassword(plain: string): Promise<string> {
@@ -61,6 +67,28 @@ export function issueAccessToken(
 
   return jwt.sign(payload, env.JWT_SECRET, {
     expiresIn,
+    issuer: "medora-api",
+  } as jwt.SignOptions);
+}
+
+/** Issue a short-lived impersonation JWT for a clinic owner session. */
+export function issueImpersonationToken(params: {
+  ownerId: string;
+  ownerEmail: string;
+  clinicId: string;
+  superAdminId: string;
+}): string {
+  const env = getEnv();
+  const payload: JwtAccessPayload = {
+    sub: params.ownerId,
+    email: params.ownerEmail,
+    role: "Owner",
+    clinicId: params.clinicId,
+    isImpersonation: true,
+    impersonatedBy: params.superAdminId,
+  };
+  return jwt.sign(payload, env.JWT_SECRET, {
+    expiresIn: "1h",
     issuer: "medora-api",
   } as jwt.SignOptions);
 }
@@ -143,10 +171,11 @@ export async function loginWithCredentials(
       email: true,
       name: true,
       role: true,
+      status: true,
       emailVerified: true,
       passwordHash: true,
       clinic: {
-        select: { id: true, name: true, slug: true },
+        select: { id: true, name: true, slug: true, status: true },
       },
     },
   });
@@ -158,6 +187,14 @@ export async function loginWithCredentials(
   const passwordOk = await argon2.verify(user.passwordHash, password);
   if (!passwordOk) {
     throw new HttpError(401, "Invalid email or password", "INVALID_CREDENTIALS");
+  }
+
+  if (user.status === "suspended") {
+    throw new HttpError(403, "Your account has been suspended. Contact support.", "USER_SUSPENDED");
+  }
+
+  if (user.clinic?.status === "suspended") {
+    throw new HttpError(403, "This clinic has been suspended. Contact support.", "CLINIC_SUSPENDED");
   }
 
   const env = getEnv();

@@ -6,6 +6,8 @@ declare global {
         email: string;
         role: "Owner" | "Doctor" | "Receptionist" | "SuperAdmin";
         clinicId?: string;
+        isImpersonation?: boolean;
+        impersonatedBy?: string;
       };
     }
   }

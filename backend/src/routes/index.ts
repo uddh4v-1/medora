@@ -13,6 +13,7 @@ import { invoicesRouter } from "./invoices.routes";
 import { teamRouter } from "./team.routes";
 import { clinicRouter } from "./clinic.routes";
 import { auditRouter } from "./audit.routes";
+import { superadminRouter } from "./superadmin.routes";
 
 export const apiRouter = Router();
 
@@ -46,3 +47,4 @@ apiRouter.use("/invoices", requireAuth, auditMiddleware, invoicesRouter);
 apiRouter.use("/team", requireAuth, auditMiddleware, teamRouter);
 apiRouter.use("/clinic", requireAuth, auditMiddleware, clinicRouter);
 apiRouter.use("/audit", requireAuth, auditRouter);
+apiRouter.use("/superadmin", requireAuth, superadminRouter);
