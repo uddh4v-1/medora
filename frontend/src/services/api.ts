@@ -45,6 +45,7 @@ const SKIP_REFRESH = [
   "/auth/forgot-password",
   "/auth/reset-password",
   "/auth/verify-email",
+  "/auth/me",
 ];
 
 let isRefreshing = false;
