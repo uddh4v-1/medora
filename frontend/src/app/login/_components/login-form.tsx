@@ -131,6 +131,16 @@ export function LoginForm() {
           >
             {isSubmitting ? t("auth.signingIn") : t("auth.loginCta")}
           </Button>
+
+          <p className="text-center text-xs text-muted-foreground">
+            New here?{" "}
+            <Link
+              href="/signup"
+              className="font-medium text-foreground transition-colors hover:text-brand"
+            >
+              Register your clinic
+            </Link>
+          </p>
         </form>
       </div>
     </div>
