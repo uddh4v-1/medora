@@ -50,6 +50,10 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   /** Required if SMTP_HOST is set — e.g. `Medora <no-reply@yourdomain.com>` */
   MAIL_FROM: z.string().optional(),
+
+  /** Razorpay payment gateway credentials */
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

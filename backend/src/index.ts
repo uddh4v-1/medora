@@ -3,11 +3,14 @@ import "dotenv/config";
 import { createApp } from "@/app";
 import { getEnv } from "@/config/env";
 import { prisma } from "@/lib/prisma";
+import { startTrialReminderJob } from "@/jobs/trial-reminders";
 
 const env = getEnv();
 const app = createApp();
 
 const port = env.PORT;
+
+startTrialReminderJob();
 
 const server = app.listen(port, () => {
   console.log(`medora-backend listening on http://localhost:${port}`);

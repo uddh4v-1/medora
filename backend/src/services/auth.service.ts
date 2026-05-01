@@ -275,12 +275,17 @@ export async function registerClinicOwner(input: {
 
   try {
     const { userRow } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
       const clinic = await tx.clinic.create({
         data: {
           name: input.clinicName.trim(),
           slug,
           phone: phoneE164,
-          featureFlags: { create: {} }, // defaults: publicBooking=true, whatsappNotifications=false
+          featureFlags: { create: {} },
+          subscription: {
+            create: { plan: "trial", billingStatus: "trial", trialEndsAt },
+          },
         },
       });
 

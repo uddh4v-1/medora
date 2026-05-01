@@ -22,6 +22,7 @@ import { getTeamMembers } from "@/services/team.service";
 import { useClinicStore } from "@/stores/clinic-store";
 import { getMe } from "@/services/auth.service";
 import { getClinic } from "@/services/clinic.service";
+import { getSubscription } from "@/services/billing.service";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 
 type Props = { children: React.ReactNode };
@@ -32,6 +33,7 @@ export function DashboardSessionSync({ children }: Props) {
   const signOut = useClinicStore((s) => s.signOut);
   const hydrateDashboardData = useClinicStore((s) => s.hydrateDashboardData);
   const setClinicProfile = useClinicStore((s) => s.setClinicProfile);
+  const setSubscription = useClinicStore((s) => s.setSubscription);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -196,6 +198,8 @@ export function DashboardSessionSync({ children }: Props) {
             return;
           }
 
+          const isImpersonating = data.user.isImpersonating ?? false;
+
           signIn({
             email: data.user.email,
             role: data.user.role,
@@ -203,8 +207,22 @@ export function DashboardSessionSync({ children }: Props) {
             userId: data.user.id,
             name: data.user.name ?? "",
             clinic: data.user.clinic ?? null,
-            isImpersonating: data.user.isImpersonating ?? false,
+            isImpersonating,
           });
+
+          // Fetch subscription status before loading dashboard data.
+          // Not needed for SuperAdmin impersonation — backend already allows through.
+          if (!isImpersonating && data.user.clinic) {
+            const subRes = await getSubscription();
+            if (cancelled) return;
+            if (subRes.ok) {
+              setSubscription(subRes.data.subscription);
+              if (subRes.data.subscription.isTrialExpired) {
+                setReady(true);
+                return; // Show expired wall — skip loading dashboard data
+              }
+            }
+          }
 
           const [overviewRes, patientsRes, queueRes, invoicesRes, rxRes, teamRes, clinicRes] =
             await Promise.all([
@@ -216,6 +234,25 @@ export function DashboardSessionSync({ children }: Props) {
               getTeamMembers(),
               getClinic(),
             ]);
+
+          // If any protected endpoint returns 402, treat as expired (handles mid-session expiry
+          // or cases where the subscription fetch itself was unavailable)
+          if (!cancelled) {
+            const responses = [overviewRes, patientsRes, queueRes, invoicesRes, rxRes, teamRes];
+            if (responses.some((r) => r.status === 402)) {
+              setSubscription({
+                plan: "trial",
+                billingStatus: "trial",
+                trialEndsAt: null,
+                daysRemaining: 0,
+                isTrialExpired: true,
+                currentPeriodStart: null,
+                currentPeriodEnd: null,
+              });
+              setReady(true);
+              return;
+            }
+          }
 
           if (!cancelled) {
             if (clinicRes.ok) setClinicProfile(clinicRes.data);
@@ -284,7 +321,7 @@ export function DashboardSessionSync({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [hydrateDashboardData, router, signIn, signOut, setClinicProfile]);
+  }, [hydrateDashboardData, router, signIn, signOut, setClinicProfile, setSubscription]);
 
   if (!ready) {
     return <DashboardSkeleton />;

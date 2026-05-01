@@ -14,6 +14,7 @@ const en: Pack = {
   "nav.reports": "Reports",
   "nav.notifications": "Notifications",
   "nav.settings": "Settings",
+  "nav.subscription": "Subscription",
 
   "common.cancel": "Cancel",
   "common.remove": "Remove",
@@ -327,6 +328,7 @@ const hi: Pack = {
   "nav.reports": "रिपोर्ट",
   "nav.notifications": "सूचनाएं",
   "nav.settings": "सेटिंग्स",
+  "nav.subscription": "सदस्यता",
 
   "common.cancel": "रद्द करें",
   "common.remove": "हटाएं",
@@ -585,6 +587,7 @@ const mr: Pack = {
   "nav.reports": "अहवाल",
   "nav.notifications": "सूचना",
   "nav.settings": "सेटिंग्ज",
+  "nav.subscription": "सदस्यता",
 
   "common.cancel": "रद्द",
   "common.remove": "काढा",

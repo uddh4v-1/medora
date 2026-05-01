@@ -11,6 +11,7 @@ import {
   type LucideIcon,
   Pill,
   Settings,
+  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -40,6 +41,7 @@ export const dashboardNav: DashboardNavItem[] = [
     icon: Megaphone,
   },
   { i18nKey: "nav.settings", href: "/dashboard/settings", icon: Settings },
+  { i18nKey: "nav.subscription", href: "/dashboard/subscription", icon: Sparkles },
 ];
 
 export const currentClinic = {

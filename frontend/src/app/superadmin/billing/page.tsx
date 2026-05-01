@@ -105,7 +105,9 @@ export default function BillingPage() {
     if (res.ok) {
       setItems((prev) =>
         prev.map((c) =>
-          c.id === clinic.id ? { ...c, trialEndsAt: res.data.trialEndsAt } : c,
+          c.id === clinic.id
+            ? { ...c, trialEndsAt: res.data.trialEndsAt, billingStatus: res.data.billingStatus as typeof c.billingStatus }
+            : c,
         ),
       );
       toast.success(`Trial extended by ${days} day${days !== 1 ? "s" : ""}`);
@@ -122,7 +124,13 @@ export default function BillingPage() {
     if (res.ok) {
       setItems((prev) =>
         prev.map((c) =>
-          c.id === clinic.id ? { ...c, billingStatus: status } : c,
+          c.id === clinic.id
+            ? {
+                ...c,
+                billingStatus: status,
+                ...(res.data.plan ? { plan: res.data.plan as typeof c.plan } : {}),
+              }
+            : c,
         ),
       );
       toast.success(`${clinic.name} → ${status}`);

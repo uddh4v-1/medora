@@ -26,6 +26,55 @@ function formatClinic(c: {
   };
 }
 
+export async function getClinicSubscription(clinicId: string) {
+  const sub = await prisma.clinicSubscription.findUnique({
+    where: { clinicId },
+    select: {
+      plan: true,
+      billingStatus: true,
+      trialEndsAt: true,
+      currentPeriodStart: true,
+      currentPeriodEnd: true,
+    },
+  });
+
+  if (!sub) {
+    return {
+      plan: "trial",
+      billingStatus: "trial",
+      trialEndsAt: null,
+      daysRemaining: null,
+      isTrialExpired: true,
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+    };
+  }
+
+  const now = new Date();
+  let daysRemaining: number | null = null;
+  let isTrialExpired = false;
+
+  if (sub.billingStatus === "trial") {
+    if (sub.trialEndsAt) {
+      const ms = sub.trialEndsAt.getTime() - now.getTime();
+      daysRemaining = ms > 0 ? Math.ceil(ms / (1000 * 60 * 60 * 24)) : 0;
+      isTrialExpired = ms <= 0;
+    } else {
+      isTrialExpired = true;
+    }
+  }
+
+  return {
+    plan: sub.plan,
+    billingStatus: sub.billingStatus,
+    trialEndsAt: sub.trialEndsAt?.toISOString() ?? null,
+    daysRemaining,
+    isTrialExpired,
+    currentPeriodStart: sub.currentPeriodStart?.toISOString() ?? null,
+    currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+  };
+}
+
 export async function getClinic(clinicId: string) {
   const clinic = await prisma.clinic.findUnique({
     where: { id: clinicId },

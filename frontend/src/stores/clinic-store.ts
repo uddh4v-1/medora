@@ -23,6 +23,7 @@ import {
 import type { NotificationAudience } from "@/lib/notification-segments";
 import type { ClinicSummary } from "@/services/types/auth.types";
 import type { ClinicResponse } from "@/services/clinic.service";
+import type { SubscriptionStatus } from "@/services/billing.service";
 
 export type Notification = {
   id: string;
@@ -83,8 +84,12 @@ type ClinicState = {
   /** Full clinic profile from GET /api/clinic — superset of session.clinic. */
   clinicProfile: ClinicResponse | null;
 
+  /** Subscription status from GET /api/billing/subscription — fetched fresh on every mount. */
+  subscription: SubscriptionStatus | null;
+
   setClinicProfile: (profile: ClinicResponse) => void;
   updateClinicProfile: (patch: Partial<ClinicResponse>) => void;
+  setSubscription: (sub: SubscriptionStatus) => void;
 
   signIn: (s: Session) => void;
   signOut: () => void;
@@ -137,6 +142,7 @@ const initialState = {
   broadcastHistory: [] as PatientBroadcastRecord[],
   overviewStats: null as OverviewStats | null,
   clinicProfile: null as ClinicResponse | null,
+  subscription: null as SubscriptionStatus | null,
 };
 
 export const useClinicStore = create<ClinicState>()(
@@ -149,6 +155,7 @@ export const useClinicStore = create<ClinicState>()(
         set((s) => ({
           clinicProfile: s.clinicProfile ? { ...s.clinicProfile, ...patch } : s.clinicProfile,
         })),
+      setSubscription: (subscription) => set({ subscription }),
 
       signIn: (session) => set({ session }),
       signOut: () => set({ session: null }),
@@ -234,7 +241,7 @@ export const useClinicStore = create<ClinicState>()(
     }),
     {
       name: "medora-clinic-store",
-      version: 6,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
       migrate: (persisted, version) => {
         if (persisted === null || typeof persisted !== "object") {
@@ -257,6 +264,9 @@ export const useClinicStore = create<ClinicState>()(
         }
         if (version < 6) {
           return s;
+        }
+        if (version < 7) {
+          return { ...s, subscription: null };
         }
         return persisted;
       },

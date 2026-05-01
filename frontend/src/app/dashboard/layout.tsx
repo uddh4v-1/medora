@@ -5,6 +5,8 @@ import { DashboardSidebar } from "./_components/dashboard-sidebar";
 import { DashboardTopBar } from "./_components/top-bar";
 import { ImpersonationBanner } from "./_components/impersonation-banner";
 import { PlatformBanner } from "./_components/platform-banner";
+import { TrialBanner } from "./_components/trial-banner";
+import { TrialExpiredWall } from "./_components/trial-expired-wall";
 
 export default function DashboardLayout({
   children,
@@ -16,11 +18,14 @@ export default function DashboardLayout({
       <div className="flex h-screen flex-col overflow-hidden bg-background">
         <PlatformBanner />
         <ImpersonationBanner />
+        <TrialBanner />
         <div className="flex flex-1 overflow-hidden">
           <DashboardSidebar />
           <main className="flex flex-1 flex-col overflow-y-auto">
             <DashboardTopBar />
-            {children}
+            <TrialExpiredWall>
+              {children}
+            </TrialExpiredWall>
           </main>
         </div>
       </div>

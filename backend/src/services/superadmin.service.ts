@@ -429,10 +429,10 @@ export async function updatePlatformConfig(body: UpdatePlatformConfigBody) {
 // ── Billing ───────────────────────────────────────────────────────────────────
 
 export async function listBilling(query: ListBillingQuery) {
-  const { page, limit, search } = query;
+  const { page, limit, search, status } = query;
   const skip = (page - 1) * limit;
 
-  const where = search
+  const searchClause = search
     ? {
         OR: [
           { name: { contains: search, mode: "insensitive" as const } },
@@ -440,6 +440,19 @@ export async function listBilling(query: ListBillingQuery) {
         ],
       }
     : {};
+
+  // Clinics with no subscription row are implicitly "trial"; include them when filtering for trial
+  const statusClause = status
+    ? status === "trial"
+      ? { OR: [{ subscription: { billingStatus: "trial" } }, { subscription: null }] }
+      : { subscription: { billingStatus: status } }
+    : {};
+
+  const andClauses = [
+    ...(search ? [searchClause] : []),
+    ...(status ? [statusClause] : []),
+  ];
+  const where = andClauses.length > 0 ? { AND: andClauses } : {};
 
   const [total, clinics] = await Promise.all([
     prisma.clinic.count({ where }),
@@ -503,11 +516,16 @@ export async function extendTrial(clinicId: string, body: ExtendTrialBody) {
   const result = await prisma.clinicSubscription.upsert({
     where: { clinicId },
     create: { clinicId, plan: "trial", billingStatus: "trial", trialEndsAt },
-    update: { trialEndsAt },
-    select: { trialEndsAt: true },
+    // Also reset billingStatus so cancelled/unpaid trials come back to life
+    update: { trialEndsAt, billingStatus: "trial", plan: "trial" },
+    select: { trialEndsAt: true, billingStatus: true },
   });
 
-  return { clinicId, trialEndsAt: result.trialEndsAt?.toISOString() ?? null };
+  return {
+    clinicId,
+    trialEndsAt: result.trialEndsAt?.toISOString() ?? null,
+    billingStatus: result.billingStatus,
+  };
 }
 
 export async function setBillingStatus(clinicId: string, body: SetBillingStatusBody) {
@@ -518,9 +536,12 @@ export async function setBillingStatus(clinicId: string, body: SetBillingStatusB
   const periodEnd = new Date(now);
   periodEnd.setDate(periodEnd.getDate() + 30);
 
+  // When activating without specifying a plan, default to starter
+  const plan = body.plan ?? (body.status === "active" ? "starter" : undefined);
+
   const data = {
     billingStatus: body.status,
-    ...(body.plan ? { plan: body.plan } : {}),
+    ...(plan ? { plan } : {}),
     ...(body.status === "active"
       ? { currentPeriodStart: now, currentPeriodEnd: periodEnd }
       : {}),
@@ -532,7 +553,22 @@ export async function setBillingStatus(clinicId: string, body: SetBillingStatusB
     update: data,
   });
 
-  return { clinicId, billingStatus: body.status };
+  // Create an audit payment record for manual SuperAdmin activations
+  if (body.status === "active") {
+    await prisma.paymentRecord.create({
+      data: {
+        clinicId,
+        amount: 0,
+        plan: plan ?? "starter",
+        status: "admin_activated",
+        description: "Manually activated by SuperAdmin",
+        periodStart: now,
+        periodEnd,
+      },
+    });
+  }
+
+  return { clinicId, billingStatus: body.status, plan: plan ?? null };
 }
 
 // ── Data Export ───────────────────────────────────────────────────────────────
@@ -962,13 +998,6 @@ export async function sendSuperAdminBroadcast(body: {
   segment: string;
   sentBy?: string;
 }) {
-  const where: Record<string, unknown> = { role: "Owner" };
-  if (body.segment === "trial") where["subscription"] = { billingStatus: "trial" };
-  else if (body.segment === "active") where["subscription"] = { billingStatus: "active" };
-  else if (body.segment === "cancelled") where["subscription"] = { billingStatus: "cancelled" };
-  else if (body.segment === "starter") where["subscription"] = { plan: "starter" };
-  else if (body.segment === "pro") where["subscription"] = { plan: "pro" };
-
   const owners = await prisma.user.findMany({
     where: { role: "Owner", status: "active", emailVerified: true },
     select: { email: true, name: true, clinic: { select: { subscription: { select: { billingStatus: true, plan: true } } } } },

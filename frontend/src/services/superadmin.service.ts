@@ -167,10 +167,10 @@ export function listBilling(params: ListBillingParams = {}) {
 }
 
 export function extendTrial(clinicId: string, days: number) {
-  return apiPatch<{ clinicId: string; trialEndsAt: string | null }, { days: number }>(
-    `${BASE}/billing/${clinicId}/extend-trial`,
-    { days },
-  );
+  return apiPatch<
+    { clinicId: string; trialEndsAt: string | null; billingStatus: string },
+    { days: number }
+  >(`${BASE}/billing/${clinicId}/extend-trial`, { days });
 }
 
 export function setBillingStatus(
@@ -178,7 +178,7 @@ export function setBillingStatus(
   status: BillingStatus,
   plan?: BillingPlan,
 ) {
-  return apiPatch<{ clinicId: string; billingStatus: BillingStatus }, { status: BillingStatus; plan?: BillingPlan }>(
+  return apiPatch<{ clinicId: string; billingStatus: BillingStatus; plan: string | null }, { status: BillingStatus; plan?: BillingPlan }>(
     `${BASE}/billing/${clinicId}/status`,
     { status, ...(plan ? { plan } : {}) },
   );
