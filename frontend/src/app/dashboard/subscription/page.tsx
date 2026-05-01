@@ -132,6 +132,8 @@ export default function SubscriptionPage() {
 
       const { orderId, amount, currency, keyId, planLabel } = orderRes.data;
 
+      const callbackUrl = `${window.location.origin}/dashboard/subscription/payment-callback?plan=${planId}`;
+
       const rzp = new window.Razorpay({
         key: keyId,
         amount,
@@ -141,6 +143,7 @@ export default function SubscriptionPage() {
         description: `${planLabel} Plan — Monthly`,
         prefill: { name: displayName, email: session?.email },
         theme: { color: "#0f172a" },
+        callback_url: callbackUrl,
         handler: async (response) => {
           const verifyRes = await verifyPayment({
             plan: planId,

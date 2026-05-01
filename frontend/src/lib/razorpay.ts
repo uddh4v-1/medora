@@ -18,6 +18,7 @@ export type RazorpayOptions = {
     razorpay_order_id: string;
     razorpay_signature: string;
   }) => void;
+  callback_url?: string;
   modal?: { ondismiss?: () => void };
 };
 
