@@ -7,6 +7,7 @@ export type SubscriptionStatus = {
   trialEndsAt: string | null;
   daysRemaining: number | null;
   isTrialExpired: boolean;
+  isSubscriptionExpired: boolean;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
 };

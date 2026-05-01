@@ -62,6 +62,7 @@ export async function getClinicSubscription(clinicId: string) {
   const now = new Date();
   let daysRemaining: number | null = null;
   let isTrialExpired = false;
+  let isSubscriptionExpired = false;
 
   if (sub.billingStatus === "trial") {
     if (sub.trialEndsAt) {
@@ -73,12 +74,17 @@ export async function getClinicSubscription(clinicId: string) {
     }
   }
 
+  if (sub.billingStatus === "active" && sub.currentPeriodEnd) {
+    isSubscriptionExpired = sub.currentPeriodEnd.getTime() < now.getTime();
+  }
+
   return {
     plan: sub.plan,
     billingStatus: sub.billingStatus,
     trialEndsAt: sub.trialEndsAt?.toISOString() ?? null,
     daysRemaining,
     isTrialExpired,
+    isSubscriptionExpired,
     currentPeriodStart: sub.currentPeriodStart?.toISOString() ?? null,
     currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
   };

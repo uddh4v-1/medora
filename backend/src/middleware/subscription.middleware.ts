@@ -36,6 +36,10 @@ export async function requireActiveSubscription(
     const sub = await getClinicSubscription(auth.clinicId);
 
     if (sub.billingStatus === "active") {
+      if (sub.isSubscriptionExpired) {
+        next(new HttpError(402, "Your subscription has expired. Please renew to continue.", "SUBSCRIPTION_EXPIRED"));
+        return;
+      }
       next();
       return;
     }

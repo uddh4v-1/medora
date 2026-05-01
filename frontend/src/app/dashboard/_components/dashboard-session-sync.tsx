@@ -246,6 +246,7 @@ export function DashboardSessionSync({ children }: Props) {
                 trialEndsAt: null,
                 daysRemaining: 0,
                 isTrialExpired: true,
+                isSubscriptionExpired: false,
                 currentPeriodStart: null,
                 currentPeriodEnd: null,
               });
