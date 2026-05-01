@@ -35,17 +35,21 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
 
   useEffect(() => {
     async function checkAuth() {
-      const res = await getMe();
-      if (res.ok && res.data.user?.clinic) {
-        setIsAuthenticated(true);
-        setDisplayName(res.data.user.name ?? "");
-        setEmail(res.data.user.email);
-        const [subRes, configRes] = await Promise.all([
-          getSubscription(),
-          getBillingConfig(),
-        ]);
-        if (subRes.ok) setSubscription(subRes.data.subscription);
-        if (configRes.ok) setBillingConfig(configRes.data);
+      try {
+        const res = await getMe();
+        if (res.ok && res.data.user?.clinic) {
+          setIsAuthenticated(true);
+          setDisplayName(res.data.user.name ?? "");
+          setEmail(res.data.user.email);
+          const [subRes, configRes] = await Promise.all([
+            getSubscription(),
+            getBillingConfig(),
+          ]);
+          if (subRes.ok) setSubscription(subRes.data.subscription);
+          if (configRes.ok) setBillingConfig(configRes.data);
+        }
+      } catch {
+        // Unauthenticated visitors — proceed without auth context
       }
     }
     checkAuth();
