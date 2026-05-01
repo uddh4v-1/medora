@@ -2,22 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 import type { PricingCardProps } from "./pricing-card";
 import { PricingCard } from "./pricing-card";
 import { SectionHeading } from "./section-heading";
 import {
   getSubscription,
-  getBillingConfig,
-  createOrder,
-  verifyPayment,
-  type PlanId,
   type SubscriptionStatus,
-  type BillingConfig,
 } from "@/services/billing.service";
 import { getMe } from "@/services/auth.service";
-import { loadRazorpayScript } from "@/lib/razorpay";
 
 export type PricingPlan = Omit<PricingCardProps, "annual" | "onCta" | "loading" | "disabled">;
 
@@ -26,12 +19,8 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
   const [annual, setAnnual] = useState(false);
   const hasAnnual = plans.some((p) => p.annualPrice != null);
 
-  const [loading, setLoading] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
-  const [billingConfig, setBillingConfig] = useState<BillingConfig | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -39,14 +28,8 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
         const res = await getMe();
         if (res.ok && res.data.user?.clinic) {
           setIsAuthenticated(true);
-          setDisplayName(res.data.user.name ?? "");
-          setEmail(res.data.user.email);
-          const [subRes, configRes] = await Promise.all([
-            getSubscription(),
-            getBillingConfig(),
-          ]);
+          const subRes = await getSubscription();
           if (subRes.ok) setSubscription(subRes.data.subscription);
-          if (configRes.ok) setBillingConfig(configRes.data);
         }
       } catch {
         // Unauthenticated visitors — proceed without auth context
@@ -55,74 +38,13 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
     checkAuth();
   }, []);
 
-  async function handleCta(planId: string | null, planName: string) {
+  function handleCta(planId: string | null) {
     if (!planId) {
       window.location.href = "mailto:hello@medora.app?subject=Enterprise%20pricing";
       return;
     }
-
-    if (!isAuthenticated) {
-      router.push("/register");
-      return;
-    }
-
-    if (!billingConfig || billingConfig.configured === false) {
-      toast.error("Payment gateway not configured. Please contact support.");
-      return;
-    }
-
-    setLoading(planId);
-    try {
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        toast.error("Could not load payment gateway. Please try again.");
-        setLoading(null);
-        return;
-      }
-
-      const orderRes = await createOrder(planId as PlanId);
-      if (!orderRes.ok) {
-        toast.error("Failed to create payment order. Please try again.");
-        setLoading(null);
-        return;
-      }
-
-      const { orderId, amount, currency, keyId, planLabel } = orderRes.data;
-
-      const rzp = new window.Razorpay({
-        key: keyId,
-        amount,
-        currency,
-        order_id: orderId,
-        name: "Medora",
-        description: `${planLabel} Plan`,
-        prefill: { name: displayName, email },
-        theme: { color: "#0f172a" },
-        handler: async (response) => {
-          const verifyRes = await verifyPayment({
-            plan: planId as PlanId,
-            razorpayOrderId: response.razorpay_order_id,
-            razorpayPaymentId: response.razorpay_payment_id,
-            razorpaySignature: response.razorpay_signature,
-          });
-          if (verifyRes.ok) {
-            setSubscription(verifyRes.data.subscription as SubscriptionStatus);
-            toast.success(`Upgraded to ${planName}!`, {
-              description: "Your subscription is now active.",
-            });
-          } else {
-            toast.error("Payment received but verification failed. Contact support.");
-          }
-          setLoading(null);
-        },
-        modal: { ondismiss: () => setLoading(null) },
-      });
-
-      rzp.open();
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-      setLoading(null);
-    }
+    // Landing page CTAs drive signups; upgrade happens inside the dashboard
+    router.push(isAuthenticated ? "/dashboard/subscription" : "/signup");
   }
 
   const isActive = subscription?.billingStatus === "active";
@@ -170,9 +92,9 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
               {...plan}
               annual={annual}
               cta={isCurrentPlan ? "Current plan" : plan.cta}
-              disabled={isCurrentPlan || loading !== null}
-              loading={loading === plan.planId}
-              onCta={() => handleCta(plan.planId, plan.name)}
+              disabled={isCurrentPlan}
+              loading={false}
+              onCta={() => handleCta(plan.planId)}
             />
           );
         })}
