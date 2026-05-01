@@ -4,7 +4,7 @@ import { FeaturesSection } from "@/components/landing/features-section";
 import { HeroSection } from "@/components/landing/hero-section";
 import { PatientBanner } from "@/components/landing/patient-banner";
 import { PatientSection } from "@/components/landing/patient-section";
-import type { PricingCardProps } from "@/components/landing/pricing-card";
+import type { PricingPlan } from "@/components/landing/pricing-section";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { SectionDivider } from "@/components/landing/section-divider";
 import { SiteFooter } from "@/components/landing/site-footer";
@@ -12,13 +12,11 @@ import { SiteHeader } from "@/components/landing/site-header";
 import { plans as staticPlans } from "@/lib/site-content";
 import type { CustomPlan } from "@/services/types/superadmin.types";
 
-type PlanCard = Omit<PricingCardProps, "annual">;
-
 function fmtPrice(paise: number) {
   return `₹${(paise / 100).toLocaleString("en-IN")}`;
 }
 
-function mapDynamic(plans: CustomPlan[]): PlanCard[] {
+function mapDynamic(plans: CustomPlan[]): PricingPlan[] {
   return plans.map((p) => ({
     name: p.name,
     price: fmtPrice(p.price),
@@ -26,12 +24,13 @@ function mapDynamic(plans: CustomPlan[]): PlanCard[] {
     cadence: "/mo",
     features: p.displayFeatures,
     cta: p.ctaText ?? "Get started",
-    ctaVariant: p.highlighted ? "primary" : "outline",
+    ctaVariant: p.highlighted ? ("primary" as const) : ("outline" as const),
     highlighted: p.highlighted,
+    planId: p.planId ?? null,
   }));
 }
 
-function mapStatic(): PlanCard[] {
+function mapStatic(): PricingPlan[] {
   return staticPlans.map((p) => ({
     name: p.name,
     price: p.price,
@@ -41,10 +40,11 @@ function mapStatic(): PlanCard[] {
     cta: p.cta,
     ctaVariant: p.ctaVariant,
     highlighted: p.highlighted,
+    planId: p.planId,
   }));
 }
 
-async function fetchPricingPlans(): Promise<PlanCard[]> {
+async function fetchPricingPlans(): Promise<PricingPlan[]> {
   try {
     const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4100";
     const res = await fetch(`${base}/api/plans`, { cache: "no-store" });

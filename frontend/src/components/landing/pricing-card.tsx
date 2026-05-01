@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,12 @@ export type PricingCardProps = {
   cta: string;
   ctaVariant: "primary" | "outline";
   highlighted: boolean;
+  planId: string | null;
+  // Set by parent at render time
   annual: boolean;
+  onCta?: () => void;
+  loading?: boolean;
+  disabled?: boolean;
 };
 
 export function PricingCard({
@@ -31,6 +36,9 @@ export function PricingCard({
   ctaVariant,
   highlighted,
   annual,
+  onCta,
+  loading = false,
+  disabled = false,
 }: PricingCardProps) {
   return (
     <Card
@@ -68,15 +76,21 @@ export function PricingCard({
 
         <div className="mt-auto pt-2">
           {ctaVariant === "primary" ? (
-            <Button className="h-10 w-full rounded-lg bg-brand text-sm font-medium text-brand-foreground shadow-brand hover:bg-brand/90">
-              {cta}
+            <Button
+              onClick={onCta}
+              disabled={disabled || loading}
+              className="h-10 w-full rounded-lg bg-brand text-sm font-medium text-brand-foreground shadow-brand hover:bg-brand/90 disabled:opacity-60"
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : cta}
             </Button>
           ) : (
             <Button
               variant="outline"
-              className="h-10 w-full rounded-lg border-border bg-card text-sm text-foreground hover:bg-accent hover:text-foreground"
+              onClick={onCta}
+              disabled={disabled || loading}
+              className="h-10 w-full rounded-lg border-border bg-card text-sm text-foreground hover:bg-accent hover:text-foreground disabled:opacity-60"
             >
-              {cta}
+              {loading ? <Loader2 className="size-4 animate-spin" /> : cta}
             </Button>
           )}
         </div>

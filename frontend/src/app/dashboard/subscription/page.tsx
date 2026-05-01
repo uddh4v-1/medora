@@ -18,29 +18,7 @@ import {
 import type { CustomPlan } from "@/services/types/superadmin.types";
 import { cn } from "@/lib/utils";
 
-// Razorpay checkout.js types
-declare global {
-  interface Window {
-    Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
-  }
-}
-type RazorpayOptions = {
-  key: string;
-  amount: number;
-  currency: string;
-  order_id: string;
-  name: string;
-  description: string;
-  prefill?: { name?: string; email?: string };
-  theme?: { color?: string };
-  handler: (response: {
-    razorpay_payment_id: string;
-    razorpay_order_id: string;
-    razorpay_signature: string;
-  }) => void;
-  modal?: { ondismiss?: () => void };
-};
-type RazorpayInstance = { open: () => void };
+import { loadRazorpayScript } from "@/lib/razorpay";
 
 // Static fallback plans shown when the DB has no active CustomPlans configured
 const FALLBACK_PLANS: CustomPlan[] = [
@@ -110,19 +88,6 @@ function fmtPrice(paise: number) {
   return `₹${(paise / 100).toLocaleString("en-IN")}`;
 }
 
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof window.Razorpay !== "undefined") {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
 
 function copyText(text: string) {
   navigator.clipboard?.writeText(text).then(() => toast.success("Copied!"));
@@ -169,7 +134,7 @@ export default function SubscriptionPage() {
   const setSubscription = useClinicStore((s) => s.setSubscription);
   const [loading, setLoading] = useState<string | null>(null);
   const [billingConfig, setBillingConfig] = useState<BillingConfig | null>(null);
-  const [plans, setPlans] = useState<CustomPlan[]>([]);
+  const [plans, setPlans] = useState<CustomPlan[]>(FALLBACK_PLANS);
   const [annual, setAnnual] = useState(false);
 
   useEffect(() => {

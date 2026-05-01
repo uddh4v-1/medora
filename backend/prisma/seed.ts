@@ -46,11 +46,17 @@ async function main() {
   const passwordHash = await hashPassword(DEMO.password);
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
     const clinic = await tx.clinic.create({
       data: {
         name: DEMO.clinicName,
         slug: DEMO.slug,
         phone: phoneE164,
+        featureFlags: { create: {} },
+        subscription: {
+          create: { plan: "trial", billingStatus: "trial", trialEndsAt },
+        },
       },
     });
 

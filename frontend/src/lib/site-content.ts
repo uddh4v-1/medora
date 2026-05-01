@@ -101,6 +101,7 @@ export type Plan = {
   cta: string;
   ctaVariant: "primary" | "outline";
   highlighted: boolean;
+  planId: string | null;
 };
 
 export type ContactChannel = {
@@ -161,6 +162,7 @@ export const plans: Plan[] = [
     cta: "Start free trial",
     ctaVariant: "outline",
     highlighted: false,
+    planId: "starter",
   },
   {
     name: "Clinic",
@@ -178,6 +180,7 @@ export const plans: Plan[] = [
     cta: "Start free trial",
     ctaVariant: "primary",
     highlighted: true,
+    planId: "pro",
   },
   {
     name: "Enterprise",
@@ -194,5 +197,6 @@ export const plans: Plan[] = [
     cta: "Talk to sales",
     ctaVariant: "outline",
     highlighted: false,
+    planId: null,
   },
 ];
