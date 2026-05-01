@@ -171,6 +171,7 @@ export default function SubscriptionPage() {
 
   const currentPlan = subscription?.plan ?? "trial";
   const isActive = subscription?.billingStatus === "active";
+  const isOnTrial = subscription?.billingStatus === "trial";
   const isTestMode = billingConfig?.isTestMode ?? false;
   const hasAnnual = plans.some((p) => p.annualPrice != null);
 
@@ -311,7 +312,7 @@ export default function SubscriptionPage() {
                   {plan.planId && (plan.planId === "starter" || plan.planId === "pro") ? (
                     <button
                       onClick={() => handleUpgrade(plan.planId as PlanId, plan.name)}
-                      disabled={isCurrentPlan || loading !== null || billingConfig?.configured === false}
+                      disabled={isCurrentPlan || loading !== null || !billingConfig || billingConfig.configured === false}
                       className={cn(
                         "flex h-10 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-60",
                         isCurrentPlan
@@ -325,6 +326,8 @@ export default function SubscriptionPage() {
                         <Loader2 className="size-4 animate-spin" />
                       ) : isCurrentPlan ? (
                         "Current plan"
+                      ) : isOnTrial ? (
+                        "Buy now"
                       ) : (
                         ctaText
                       )}

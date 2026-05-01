@@ -62,7 +62,7 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
       return;
     }
 
-    if (billingConfig?.configured === false) {
+    if (!billingConfig || billingConfig.configured === false) {
       toast.error("Payment gateway not configured. Please contact support.");
       return;
     }
