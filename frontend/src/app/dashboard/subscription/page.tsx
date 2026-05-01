@@ -17,66 +17,33 @@ import {
 } from "@/services/billing.service";
 import type { CustomPlan } from "@/services/types/superadmin.types";
 import { cn } from "@/lib/utils";
-
 import { loadRazorpayScript } from "@/lib/razorpay";
+import { plans as staticPlans } from "@/lib/site-content";
 
-// Static fallback plans shown when the DB has no active CustomPlans configured
-const FALLBACK_PLANS: CustomPlan[] = [
-  {
-    id: "starter",
-    name: "Solo",
-    price: 99900,
-    annualPrice: 79900,
-    planId: "starter",
-    description: "Perfect for solo practitioners",
-    displayFeatures: ["1 doctor", "500 patients", "Appointments & visits", "Invoicing & reports", "Public booking page"],
-    features: {},
-    highlighted: false,
-    ctaText: "Upgrade to Solo",
-    sortOrder: 0,
-    isActive: true,
-    maxPatients: 500,
-    maxUsers: 1,
-    createdAt: "",
-    updatedAt: "",
-  },
-  {
-    id: "pro",
-    name: "Clinic",
-    price: 199900,
-    annualPrice: 159900,
-    planId: "pro",
-    description: "For growing clinics with multiple doctors",
-    displayFeatures: ["Up to 5 doctors", "Unlimited patients", "Broadcast notifications", "WhatsApp reminders", "Prescription PDFs", "Advanced analytics"],
-    features: {},
-    highlighted: true,
-    ctaText: "Upgrade to Clinic",
-    sortOrder: 1,
-    isActive: true,
-    maxPatients: null,
-    maxUsers: 5,
-    createdAt: "",
-    updatedAt: "",
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 599900,
-    annualPrice: 479900,
-    planId: null,
-    description: "For hospital groups and large practices",
-    displayFeatures: ["Unlimited doctors", "Multi-location support", "Custom branding", "Priority support", "Dedicated onboarding"],
-    features: {},
-    highlighted: false,
-    ctaText: "Talk to sales",
-    sortOrder: 2,
-    isActive: true,
-    maxPatients: null,
-    maxUsers: null,
-    createdAt: "",
-    updatedAt: "",
-  },
-];
+// Derive fallback plans from the same static source the landing page uses so
+// prices are always consistent between the two pages.
+function parsePaisa(formatted: string): number {
+  return Math.round(parseFloat(formatted.replace(/[₹,]/g, "")) * 100);
+}
+
+const FALLBACK_PLANS: CustomPlan[] = staticPlans.map((p, i) => ({
+  id: p.planId ?? `plan-${i}`,
+  name: p.name,
+  price: parsePaisa(p.price),
+  annualPrice: p.annualPrice ? parsePaisa(p.annualPrice) : null,
+  planId: p.planId,
+  description: null,
+  displayFeatures: p.features,
+  features: {},
+  highlighted: p.highlighted,
+  ctaText: p.cta,
+  sortOrder: i,
+  isActive: true,
+  maxPatients: null,
+  maxUsers: null,
+  createdAt: "",
+  updatedAt: "",
+}));
 
 const TEST_CARDS = [
   { label: "Card (success)", value: "4111 1111 1111 1111", note: "Any future date, any CVV" },
@@ -142,7 +109,7 @@ export default function SubscriptionPage() {
       if (res.ok) setBillingConfig(res.data);
     });
     getPublicPlans().then((res) => {
-      setPlans(res.ok && res.data.length > 0 ? res.data : FALLBACK_PLANS);
+      setPlans(Array.isArray(res.data) && res.data.length > 0 ? res.data : FALLBACK_PLANS);
     });
   }, []);
 

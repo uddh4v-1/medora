@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/utils/http-error";
+import { getClinicSubscription } from "@/services/clinic.service";
 
 /**
  * Blocks clinic users whose trial has expired or billing is inactive.
@@ -33,27 +33,19 @@ export async function requireActiveSubscription(
   }
 
   try {
-    const sub = await prisma.clinicSubscription.findUnique({
-      where: { clinicId: auth.clinicId },
-      select: { billingStatus: true, trialEndsAt: true },
-    });
-
-    // No subscription row — treat as expired (defensive; all new clinics get one on register)
-    if (!sub) {
-      next(new HttpError(402, "No active subscription found. Please contact support.", "NO_SUBSCRIPTION"));
-      return;
-    }
+    const sub = await getClinicSubscription(auth.clinicId);
 
     if (sub.billingStatus === "active") {
       next();
       return;
     }
 
+    if (sub.billingStatus === "trial" && !sub.isTrialExpired) {
+      next();
+      return;
+    }
+
     if (sub.billingStatus === "trial") {
-      if (sub.trialEndsAt && sub.trialEndsAt > new Date()) {
-        next();
-        return;
-      }
       next(new HttpError(402, "Your free trial has ended. Please upgrade to continue.", "TRIAL_EXPIRED"));
       return;
     }

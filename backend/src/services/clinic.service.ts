@@ -26,28 +26,37 @@ function formatClinic(c: {
   };
 }
 
+const SUB_SELECT = {
+  plan: true,
+  billingStatus: true,
+  trialEndsAt: true,
+  currentPeriodStart: true,
+  currentPeriodEnd: true,
+} as const;
+
 export async function getClinicSubscription(clinicId: string) {
-  const sub = await prisma.clinicSubscription.findUnique({
+  let sub = await prisma.clinicSubscription.findUnique({
     where: { clinicId },
-    select: {
-      plan: true,
-      billingStatus: true,
-      trialEndsAt: true,
-      currentPeriodStart: true,
-      currentPeriodEnd: true,
-    },
+    select: SUB_SELECT,
   });
 
   if (!sub) {
-    return {
-      plan: "trial",
-      billingStatus: "trial",
-      trialEndsAt: null,
-      daysRemaining: null,
-      isTrialExpired: true,
-      currentPeriodStart: null,
-      currentPeriodEnd: null,
-    };
+    // No subscription record — auto-create a 14-day trial anchored to the
+    // clinic's own createdAt so existing seed/demo accounts get fair time.
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicId },
+      select: { createdAt: true },
+    });
+    const base = clinic?.createdAt ?? new Date();
+    const trialEndsAt = new Date(base.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    // upsert handles the race where two requests arrive simultaneously
+    sub = await prisma.clinicSubscription.upsert({
+      where: { clinicId },
+      create: { clinicId, plan: "trial", billingStatus: "trial", trialEndsAt },
+      update: {},
+      select: SUB_SELECT,
+    });
   }
 
   const now = new Date();
