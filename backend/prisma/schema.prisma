@@ -429,6 +429,7 @@ model CustomPlan {
   description     String?  @db.Text
   price           Int
   annualPrice     Int?     @map("annual_price")
+  planId          String?  @map("plan_id") @db.VarChar(32)
   maxPatients     Int?     @map("max_patients")
   maxUsers        Int?     @map("max_users")
   features        Json     @default("{}")

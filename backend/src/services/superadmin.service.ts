@@ -1335,6 +1335,7 @@ type PlanBody = {
   description?: string;
   price: number;
   annualPrice?: number;
+  planId?: string;
   maxPatients?: number;
   maxUsers?: number;
   features: Record<string, boolean>;
@@ -1351,6 +1352,7 @@ export async function createCustomPlan(body: PlanBody) {
       description: body.description ?? null,
       price: body.price,
       annualPrice: body.annualPrice ?? null,
+      planId: body.planId ?? null,
       maxPatients: body.maxPatients ?? null,
       maxUsers: body.maxUsers ?? null,
       features: body.features,

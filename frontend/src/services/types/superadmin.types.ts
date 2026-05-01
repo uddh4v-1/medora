@@ -246,6 +246,7 @@ export interface CustomPlan {
   description: string | null;
   price: number;
   annualPrice: number | null;
+  planId: string | null;
   maxPatients: number | null;
   maxUsers: number | null;
   features: Record<string, boolean>;

@@ -6,18 +6,29 @@ import { HttpError } from "@/utils/http-error";
 import { sendMail } from "@/lib/mailer";
 import { paymentConfirmedPlainText, paymentConfirmedHtml } from "@/lib/email-templates/payment";
 
-const PLAN_AMOUNT_PAISE: Record<string, number> = {
-  starter: 299900,
-  pro:     799900,
+// Fallback amounts (paise) used when no matching CustomPlan row exists in DB
+const FALLBACK_AMOUNT_PAISE: Record<string, number> = {
+  starter: 99900,
+  pro:     199900,
 };
 
-const PLAN_LABEL: Record<string, string> = {
-  starter: "Starter",
-  pro:     "Pro",
+const FALLBACK_LABEL: Record<string, string> = {
+  starter: "Solo",
+  pro:     "Clinic",
 };
 
 export async function createRazorpayOrder(clinicId: string, plan: string) {
-  const amount = PLAN_AMOUNT_PAISE[plan];
+  // Prefer the price from the active CustomPlan row so the landing page and
+  // checkout always show the same number. Fall back to hardcoded defaults if
+  // no matching plan has been configured in the SuperAdmin panel.
+  const dbPlan = await prisma.customPlan.findFirst({
+    where: { planId: plan, isActive: true },
+    select: { price: true, name: true },
+  });
+
+  const amount = dbPlan?.price ?? FALLBACK_AMOUNT_PAISE[plan];
+  const planLabel = dbPlan?.name ?? FALLBACK_LABEL[plan];
+
   if (!amount) {
     throw new HttpError(400, `Unknown plan: ${plan}`, "INVALID_PLAN");
   }
@@ -35,7 +46,7 @@ export async function createRazorpayOrder(clinicId: string, plan: string) {
     amount: order.amount,
     currency: order.currency,
     plan,
-    planLabel: PLAN_LABEL[plan],
+    planLabel,
   };
 }
 
@@ -60,7 +71,14 @@ export async function verifyAndActivate(params: {
     throw new HttpError(400, "Payment verification failed. Please contact support.", "INVALID_SIGNATURE");
   }
 
-  const amount = PLAN_AMOUNT_PAISE[params.plan];
+  const dbPlan = await prisma.customPlan.findFirst({
+    where: { planId: params.plan, isActive: true },
+    select: { price: true, name: true },
+  });
+
+  const amount = dbPlan?.price ?? FALLBACK_AMOUNT_PAISE[params.plan];
+  const planLabel = dbPlan?.name ?? FALLBACK_LABEL[params.plan];
+
   if (!amount) {
     throw new HttpError(400, `Unknown plan: ${params.plan}`, "INVALID_PLAN");
   }
@@ -89,10 +107,10 @@ export async function verifyAndActivate(params: {
     prisma.paymentRecord.create({
       data: {
         clinicId: params.clinicId,
-        amount: Math.round(amount / 100), // store in rupees
+        amount: Math.round(amount / 100),
         plan: params.plan,
         status: "paid",
-        description: `${PLAN_LABEL[params.plan] ?? params.plan} plan — Razorpay ${params.razorpayPaymentId}`,
+        description: `${planLabel} plan — Razorpay ${params.razorpayPaymentId}`,
         periodStart: now,
         periodEnd,
       },
@@ -101,7 +119,7 @@ export async function verifyAndActivate(params: {
 
   // Send payment confirmation email (fire-and-forget — never block the API response)
   sendPaymentConfirmationEmail(params.clinicId, {
-    plan: PLAN_LABEL[params.plan] ?? params.plan,
+    plan: planLabel,
     amountRupees: Math.round(amount / 100),
     periodEnd,
   }).catch((e) => console.error("[payment] confirmation email failed:", e));

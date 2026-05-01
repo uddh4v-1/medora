@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Loader2, Zap, Building2, FlaskConical, Copy } from "lucide-react";
+import { Check, Loader2, FlaskConical, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useClinicStore } from "@/stores/clinic-store";
 import { useDashboardSession } from "@/app/dashboard/_hooks/use-dashboard-session";
@@ -10,10 +10,13 @@ import {
   createOrder,
   verifyPayment,
   getBillingConfig,
+  getPublicPlans,
   type PlanId,
   type SubscriptionStatus,
   type BillingConfig,
 } from "@/services/billing.service";
+import type { CustomPlan } from "@/services/types/superadmin.types";
+import { cn } from "@/lib/utils";
 
 // Razorpay checkout.js types
 declare global {
@@ -39,55 +42,73 @@ type RazorpayOptions = {
 };
 type RazorpayInstance = { open: () => void };
 
-const PLANS: {
-  id: PlanId;
-  name: string;
-  price: number;
-  description: string;
-  highlighted: boolean;
-  icon: typeof Zap;
-  features: string[];
-}[] = [
+// Static fallback plans shown when the DB has no active CustomPlans configured
+const FALLBACK_PLANS: CustomPlan[] = [
   {
     id: "starter",
-    name: "Starter",
-    price: 2999,
-    description: "Perfect for solo practitioners and small clinics",
+    name: "Solo",
+    price: 99900,
+    annualPrice: 79900,
+    planId: "starter",
+    description: "Perfect for solo practitioners",
+    displayFeatures: ["1 doctor", "500 patients", "Appointments & visits", "Invoicing & reports", "Public booking page"],
+    features: {},
     highlighted: false,
-    icon: Zap,
-    features: [
-      "Up to 500 patients",
-      "1 doctor",
-      "Appointments & queue",
-      "Prescriptions & invoices",
-      "Patient records",
-      "Email support",
-    ],
+    ctaText: "Upgrade to Solo",
+    sortOrder: 0,
+    isActive: true,
+    maxPatients: 500,
+    maxUsers: 1,
+    createdAt: "",
+    updatedAt: "",
   },
   {
     id: "pro",
-    name: "Pro",
-    price: 7999,
+    name: "Clinic",
+    price: 199900,
+    annualPrice: 159900,
+    planId: "pro",
     description: "For growing clinics with multiple doctors",
+    displayFeatures: ["Up to 5 doctors", "Unlimited patients", "Broadcast notifications", "WhatsApp reminders", "Prescription PDFs", "Advanced analytics"],
+    features: {},
     highlighted: true,
-    icon: Building2,
-    features: [
-      "Unlimited patients",
-      "Up to 5 doctors",
-      "Everything in Starter",
-      "Multi-location support",
-      "Revenue analytics",
-      "Priority support",
-    ],
+    ctaText: "Upgrade to Clinic",
+    sortOrder: 1,
+    isActive: true,
+    maxPatients: null,
+    maxUsers: 5,
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: 599900,
+    annualPrice: 479900,
+    planId: null,
+    description: "For hospital groups and large practices",
+    displayFeatures: ["Unlimited doctors", "Multi-location support", "Custom branding", "Priority support", "Dedicated onboarding"],
+    features: {},
+    highlighted: false,
+    ctaText: "Talk to sales",
+    sortOrder: 2,
+    isActive: true,
+    maxPatients: null,
+    maxUsers: null,
+    createdAt: "",
+    updatedAt: "",
   },
 ];
 
-// Test card details Razorpay provides for sandbox mode
 const TEST_CARDS = [
   { label: "Card (success)", value: "4111 1111 1111 1111", note: "Any future date, any CVV" },
   { label: "UPI (success)", value: "success@razorpay", note: "Enter in UPI field" },
   { label: "Card (failure)", value: "4000 0000 0000 0002", note: "Any future date, any CVV" },
 ];
+
+function fmtPrice(paise: number) {
+  return `₹${(paise / 100).toLocaleString("en-IN")}`;
+}
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -146,16 +167,21 @@ export default function SubscriptionPage() {
   const { displayName, session } = useDashboardSession();
   const subscription = useClinicStore((s) => s.subscription);
   const setSubscription = useClinicStore((s) => s.setSubscription);
-  const [loading, setLoading] = useState<PlanId | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
   const [billingConfig, setBillingConfig] = useState<BillingConfig | null>(null);
+  const [plans, setPlans] = useState<CustomPlan[]>([]);
+  const [annual, setAnnual] = useState(false);
 
   useEffect(() => {
     getBillingConfig().then((res) => {
       if (res.ok) setBillingConfig(res.data);
     });
+    getPublicPlans().then((res) => {
+      setPlans(res.ok && res.data.length > 0 ? res.data : FALLBACK_PLANS);
+    });
   }, []);
 
-  async function handleUpgrade(planId: PlanId) {
+  async function handleUpgrade(planId: PlanId, planName: string) {
     setLoading(planId);
     try {
       const scriptLoaded = await loadRazorpayScript();
@@ -193,7 +219,7 @@ export default function SubscriptionPage() {
 
           if (verifyRes.ok) {
             setSubscription(verifyRes.data.subscription as SubscriptionStatus);
-            toast.success(`Upgraded to ${planLabel}!`, {
+            toast.success(`Upgraded to ${planName}!`, {
               description: "Your subscription is now active.",
             });
           } else {
@@ -214,6 +240,7 @@ export default function SubscriptionPage() {
   const currentPlan = subscription?.plan ?? "trial";
   const isActive = subscription?.billingStatus === "active";
   const isTestMode = billingConfig?.isTestMode ?? false;
+  const hasAnnual = plans.some((p) => p.annualPrice != null);
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 md:px-8">
@@ -240,7 +267,7 @@ export default function SubscriptionPage() {
       {/* Active subscription banner */}
       {isActive && (
         <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-900 dark:bg-green-950/30">
-          <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
+          <Check className="size-5 text-green-600 dark:text-green-400" />
           <div className="text-sm">
             <span className="font-medium text-green-800 dark:text-green-200">
               Active subscription
@@ -271,18 +298,55 @@ export default function SubscriptionPage() {
         </div>
       )}
 
-      {/* Plan cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl">
-        {PLANS.map((plan) => {
-          const isCurrentPlan = isActive && currentPlan === plan.id;
-          const Icon = plan.icon;
+      {/* Annual / Monthly toggle */}
+      {hasAnnual && (
+        <div className="flex items-center gap-3">
+          <span className={cn("text-sm", !annual ? "font-medium text-foreground" : "text-muted-foreground")}>
+            Monthly
+          </span>
+          <button
+            role="switch"
+            aria-checked={annual}
+            onClick={() => setAnnual((a) => !a)}
+            className={cn(
+              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              annual ? "bg-primary" : "bg-muted"
+            )}
+          >
+            <span
+              className={cn(
+                "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                annual ? "translate-x-6" : "translate-x-1"
+              )}
+            />
+          </button>
+          <span className={cn("text-sm", annual ? "font-medium text-foreground" : "text-muted-foreground")}>
+            Annual
+            <span className="ml-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              Save 20%
+            </span>
+          </span>
+        </div>
+      )}
+
+      {/* Plan cards — same grid as landing page */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:max-w-5xl">
+        {plans.map((plan) => {
+          const isCurrentPlan = isActive && currentPlan === plan.planId;
+          const displayPrice = annual && plan.annualPrice != null
+            ? fmtPrice(plan.annualPrice)
+            : fmtPrice(plan.price);
+          const ctaText = plan.ctaText ?? plan.name;
 
           return (
             <div
               key={plan.id}
-              className={`relative flex flex-col gap-5 rounded-xl border p-6 ${
-                plan.highlighted ? "border-primary shadow-sm" : "border-border"
-              }`}
+              className={cn(
+                "relative flex flex-col rounded-2xl p-2 transition-all",
+                plan.highlighted
+                  ? "ring-2 ring-primary shadow-sm"
+                  : "ring-1 ring-border hover:ring-foreground/20"
+              )}
             >
               {plan.highlighted && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
@@ -290,49 +354,64 @@ export default function SubscriptionPage() {
                 </span>
               )}
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <Icon className="size-5 text-primary" />
-                  <h3 className="text-base font-semibold">{plan.name}</h3>
+              <div className="px-5 pt-5 pb-1">
+                <p className="text-sm font-medium text-muted-foreground">{plan.name}</p>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-3xl font-semibold text-foreground">{displayPrice}</span>
+                  <span className="text-sm text-muted-foreground">/mo</span>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-              </div>
-
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold">
-                  ₹{plan.price.toLocaleString("en-IN")}
-                </span>
-                <span className="text-sm text-muted-foreground">/month</span>
-              </div>
-
-              <ul className="flex flex-col gap-2">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="size-4 shrink-0 text-primary" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => handleUpgrade(plan.id)}
-                disabled={isCurrentPlan || loading !== null || billingConfig?.configured === false}
-                className={`mt-auto flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition ${
-                  isCurrentPlan
-                    ? "cursor-default bg-muted text-muted-foreground"
-                    : plan.highlighted
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-                    : "border border-border bg-background text-foreground hover:bg-muted disabled:opacity-60"
-                }`}
-              >
-                {loading === plan.id ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : isCurrentPlan ? (
-                  "Current plan"
-                ) : (
-                  `Upgrade to ${plan.name}`
+                {plan.description && (
+                  <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                 )}
-              </button>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-5 px-5 pb-5 pt-4">
+                <ul className="flex flex-col gap-2.5">
+                  {plan.displayFeatures.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-foreground">
+                      <Check className="size-4 shrink-0 text-primary" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-auto pt-2">
+                  {plan.planId && (plan.planId === "starter" || plan.planId === "pro") ? (
+                    <button
+                      onClick={() => handleUpgrade(plan.planId as PlanId, plan.name)}
+                      disabled={isCurrentPlan || loading !== null || billingConfig?.configured === false}
+                      className={cn(
+                        "flex h-10 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-60",
+                        isCurrentPlan
+                          ? "cursor-default bg-muted text-muted-foreground"
+                          : plan.highlighted
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border border-border bg-card text-foreground hover:bg-accent"
+                      )}
+                    >
+                      {loading === plan.planId ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : isCurrentPlan ? (
+                        "Current plan"
+                      ) : (
+                        ctaText
+                      )}
+                    </button>
+                  ) : (
+                    <a
+                      href="mailto:hello@medora.app?subject=Enterprise%20pricing"
+                      className={cn(
+                        "flex h-10 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition",
+                        plan.highlighted
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border border-border bg-card text-foreground hover:bg-accent"
+                      )}
+                    >
+                      {ctaText}
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
           );
         })}
@@ -342,7 +421,7 @@ export default function SubscriptionPage() {
         All prices are in INR and exclusive of applicable taxes. Payments are processed
         securely via Razorpay.{" "}
         <a
-          href="mailto:support@medora.app"
+          href="mailto:hello@medora.app"
           className="underline underline-offset-2"
         >
           Contact us

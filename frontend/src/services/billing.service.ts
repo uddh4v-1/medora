@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from "./api";
+import type { CustomPlan } from "./types/superadmin.types";
 
 export type SubscriptionStatus = {
   plan: string;
@@ -26,6 +27,10 @@ export type BillingConfig = {
   isTestMode: boolean;
   configured: boolean;
 };
+
+export async function getPublicPlans() {
+  return apiGet<CustomPlan[]>("/api/plans");
+}
 
 export async function getSubscription() {
   return apiGet<{ subscription: SubscriptionStatus }>("/api/billing/subscription");
