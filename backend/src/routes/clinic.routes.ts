@@ -4,8 +4,10 @@ import {
   exportClinicDataHandler,
   getClinicHandler,
   getLocations,
+  getUserClinicsHandler,
   patchClinic,
   postCreateBranch,
+  postCreateUserClinic,
   postSwitchLocation,
 } from "@/controllers/clinic.controller";
 import { requireRole } from "@/middleware/roles.middleware";
@@ -20,3 +22,7 @@ clinicRouter.get("/export", requireRole("Owner"), asyncHandler(exportClinicDataH
 clinicRouter.get("/locations", requireRole("Owner"), asyncHandler(getLocations));
 clinicRouter.post("/locations", requireRole("Owner"), asyncHandler(postCreateBranch));
 clinicRouter.post("/locations/switch", requireRole("Owner"), asyncHandler(postSwitchLocation));
+
+// Multi-clinic (user-owned independent clinics) — Owner only
+clinicRouter.get("/my-clinics", requireRole("Owner"), asyncHandler(getUserClinicsHandler));
+clinicRouter.post("/my-clinics", requireRole("Owner"), asyncHandler(postCreateUserClinic));

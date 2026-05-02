@@ -12,21 +12,28 @@ const FALLBACK_AMOUNT_PAISE: Record<string, number> = {
   pro:     199900,
 };
 
+const FALLBACK_ANNUAL_AMOUNT_PAISE: Record<string, number> = {
+  starter: 79900 * 12,  // 958800
+  pro:     159900 * 12, // 1918800
+};
+
 const FALLBACK_LABEL: Record<string, string> = {
   starter: "Solo",
   pro:     "Clinic",
 };
 
-export async function createRazorpayOrder(clinicId: string, plan: string) {
+export async function createRazorpayOrder(clinicId: string, plan: string, annual = false) {
   // Prefer the price from the active CustomPlan row so the landing page and
   // checkout always show the same number. Fall back to hardcoded defaults if
   // no matching plan has been configured in the SuperAdmin panel.
   const dbPlan = await prisma.customPlan.findFirst({
     where: { planId: plan, isActive: true },
-    select: { price: true, name: true },
+    select: { price: true, annualPrice: true, name: true },
   });
 
-  const amount = dbPlan?.price ?? FALLBACK_AMOUNT_PAISE[plan];
+  const amount = annual
+    ? (dbPlan?.annualPrice != null ? dbPlan.annualPrice * 12 : FALLBACK_ANNUAL_AMOUNT_PAISE[plan])
+    : (dbPlan?.price ?? FALLBACK_AMOUNT_PAISE[plan]);
   const planLabel = dbPlan?.name ?? FALLBACK_LABEL[plan];
 
   if (!amount) {
@@ -38,7 +45,7 @@ export async function createRazorpayOrder(clinicId: string, plan: string) {
     amount,
     currency: "INR",
     receipt: `sub_${clinicId.slice(-8)}_${Date.now()}`,
-    notes: { clinicId, plan },
+    notes: { clinicId, plan, annual: String(annual) },
   });
 
   return {
@@ -53,6 +60,7 @@ export async function createRazorpayOrder(clinicId: string, plan: string) {
 export async function verifyAndActivate(params: {
   clinicId: string;
   plan: string;
+  annual?: boolean;
   razorpayOrderId: string;
   razorpayPaymentId: string;
   razorpaySignature: string;
@@ -73,10 +81,13 @@ export async function verifyAndActivate(params: {
 
   const dbPlan = await prisma.customPlan.findFirst({
     where: { planId: params.plan, isActive: true },
-    select: { price: true, name: true },
+    select: { price: true, annualPrice: true, name: true, features: true },
   });
 
-  const amount = dbPlan?.price ?? FALLBACK_AMOUNT_PAISE[params.plan];
+  const annual = params.annual ?? false;
+  const amount = annual
+    ? (dbPlan?.annualPrice != null ? dbPlan.annualPrice * 12 : FALLBACK_ANNUAL_AMOUNT_PAISE[params.plan])
+    : (dbPlan?.price ?? FALLBACK_AMOUNT_PAISE[params.plan]);
   const planLabel = dbPlan?.name ?? FALLBACK_LABEL[params.plan];
 
   if (!amount) {
@@ -85,7 +96,11 @@ export async function verifyAndActivate(params: {
 
   const now = new Date();
   const periodEnd = new Date(now);
-  periodEnd.setDate(periodEnd.getDate() + 30);
+  periodEnd.setDate(periodEnd.getDate() + (annual ? 365 : 30));
+
+  // Check if the plan grants multi-clinic access
+  const planFeatures = (dbPlan?.features ?? {}) as Record<string, unknown>;
+  const grantsMultiClinic = planFeatures.multiClinic === true;
 
   const [subscription] = await prisma.$transaction([
     prisma.clinicSubscription.upsert({
@@ -104,13 +119,18 @@ export async function verifyAndActivate(params: {
         currentPeriodEnd: periodEnd,
       },
     }),
+    prisma.clinicFeatureFlags.upsert({
+      where: { clinicId: params.clinicId },
+      create: { clinicId: params.clinicId, multiClinic: grantsMultiClinic },
+      update: { multiClinic: grantsMultiClinic },
+    }),
     prisma.paymentRecord.create({
       data: {
         clinicId: params.clinicId,
         amount: Math.round(amount / 100),
         plan: params.plan,
         status: "paid",
-        description: `${planLabel} plan — Razorpay ${params.razorpayPaymentId}`,
+        description: `${planLabel} plan — ${annual ? "Annual" : "Monthly"} — Razorpay ${params.razorpayPaymentId}`,
         periodStart: now,
         periodEnd,
       },

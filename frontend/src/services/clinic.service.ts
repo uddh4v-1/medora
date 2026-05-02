@@ -98,3 +98,30 @@ export async function switchLocation(targetClinicId: string) {
     { targetClinicId },
   );
 }
+
+// ── Multi-clinic (user-owned) ─────────────────────────────────────────────────
+
+export type OwnedClinicSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  city: string | null;
+  multiClinicEnabled: boolean;
+};
+
+export type CreateClinicInput = {
+  clinicName: string;
+  phone: string;
+  slug: string;
+};
+
+export async function getUserClinics() {
+  return apiGet<{ clinics: OwnedClinicSummary[] }>(`${BASE}/my-clinics`);
+}
+
+export async function createUserClinic(input: CreateClinicInput) {
+  return apiPost<{ clinic: { id: string; name: string; slug: string } }, CreateClinicInput>(
+    `${BASE}/my-clinics`,
+    input,
+  );
+}

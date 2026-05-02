@@ -101,8 +101,94 @@ export async function getClinic(clinicId: string) {
 
 // ── Multi-location ────────────────────────────────────────────────────────────
 
-export async function listLocations(clinicId: string) {
-  return getGroupClinics(clinicId);
+/**
+ * Returns all clinics the user can access: every clinic they own via UserClinic,
+ * plus all branches within each of those clinic groups.
+ */
+export async function listLocations(userId: string) {
+  const userClinics = await prisma.userClinic.findMany({
+    where: { userId },
+    select: { clinicId: true },
+  });
+  if (userClinics.length === 0) return [];
+
+  // Fetch all groups (root + branches) for every owned clinic in parallel
+  const groups = await Promise.all(
+    userClinics.map((uc) => getGroupClinics(uc.clinicId)),
+  );
+
+  // Deduplicate by id
+  const seen = new Set<string>();
+  return groups.flat().filter((c) => {
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
+    return true;
+  });
+}
+
+/**
+ * Returns all directly-owned clinics for a user (no branches), with their
+ * multiClinic feature flag so the frontend knows whether the plan is gated.
+ */
+export async function getUserOwnedClinics(userId: string) {
+  const rows = await prisma.userClinic.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      clinic: {
+        select: {
+          id: true, name: true, slug: true, city: true,
+          featureFlags: { select: { multiClinic: true } },
+        },
+      },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.clinic.id,
+    name: r.clinic.name,
+    slug: r.clinic.slug,
+    city: r.clinic.city,
+    multiClinicEnabled: r.clinic.featureFlags?.multiClinic ?? false,
+  }));
+}
+
+/**
+ * Creates a new independent clinic for an existing user.
+ * Requires multiClinic to be enabled on at least one of their existing clinics.
+ */
+export async function createClinicForUser(
+  userId: string,
+  input: { clinicName: string; phone: string; slug: string },
+) {
+  // Check that the user has at least one clinic with multiClinic enabled
+  const ownedClinics = await getUserOwnedClinics(userId);
+  const hasFeature = ownedClinics.some((c) => c.multiClinicEnabled);
+  if (!hasFeature) {
+    throw new HttpError(403, "Your current plan does not support multiple clinics. Please upgrade.", "PLAN_LIMIT");
+  }
+
+  const phone = normalizeIndianMobile(input.phone);
+  if (!phone) throw new HttpError(400, "Enter a valid Indian mobile number", "INVALID_PHONE");
+
+  const slug = input.slug.trim().toLowerCase();
+  const existing = await prisma.clinic.findUnique({ where: { slug }, select: { id: true } });
+  if (existing) throw new HttpError(409, "This clinic URL is already taken", "SLUG_IN_USE");
+
+  const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+  const clinic = await prisma.clinic.create({
+    data: {
+      name: input.clinicName.trim(),
+      slug,
+      phone,
+      featureFlags: { create: {} },
+      subscription: { create: { plan: "trial", billingStatus: "trial", trialEndsAt } },
+      userClinics: { create: { userId, role: "owner" } },
+    },
+    select: { id: true, name: true, slug: true },
+  });
+
+  return clinic;
 }
 
 export async function createBranch(
@@ -133,11 +219,11 @@ export async function createBranch(
 }
 
 export async function getLocationSwitchTarget(
-  userDbClinicId: string,
+  userId: string,
   targetClinicId: string,
 ): Promise<{ id: string; name: string; slug: string }> {
-  const group = await getGroupClinics(userDbClinicId);
-  const match = group.find((c) => c.id === targetClinicId);
+  const accessible = await listLocations(userId);
+  const match = accessible.find((c) => c.id === targetClinicId);
   if (!match) throw new HttpError(403, "You do not have access to that location", "FORBIDDEN");
 
   const clinic = await prisma.clinic.findUnique({

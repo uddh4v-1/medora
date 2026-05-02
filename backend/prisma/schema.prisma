@@ -50,6 +50,7 @@ model Clinic {
   prescriptions Prescription[]
   invoices      Invoice[]
   users         User[]
+  userClinics   UserClinic[]
 
   logoUrl    String?  @map("logo_url") @db.Text
   brandColor String?  @map("brand_color") @db.VarChar(20)
@@ -90,9 +91,25 @@ model User {
   emailVerificationTokens  EmailVerificationToken[]
   refreshTokens            RefreshToken[]
   auditLogs                AuditLog[]
+  userClinics              UserClinic[]
 
   @@index([clinicId])
   @@map("users")
+}
+
+model UserClinic {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  clinicId  String   @map("clinic_id")
+  role      String   @default("owner") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clinicId])
+  @@index([userId])
+  @@map("user_clinics")
 }
 
 model PasswordResetToken {
@@ -300,6 +317,7 @@ model ClinicFeatureFlags {
   clinic                Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   publicBooking         Boolean  @default(true) @map("public_booking")
   whatsappNotifications Boolean  @default(false) @map("whatsapp_notifications")
+  multiClinic           Boolean  @default(false) @map("multi_clinic")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
