@@ -8,12 +8,14 @@ import { HttpError } from "@/utils/http-error";
 import { updateClinicBodySchema } from "@/schemas/clinic.schemas";
 import {
   createBranch,
+  createClinicForUser,
   exportAppointmentsCsv,
   exportInvoicesCsv,
   exportPatientsCsv,
   exportPrescriptionsCsv,
   getClinic,
   getLocationSwitchTarget,
+  getUserOwnedClinics,
   listLocations,
   updateClinic,
 } from "@/services/clinic.service";
@@ -82,8 +84,8 @@ const CreateBranchBody = z.object({
 });
 
 export async function getLocations(req: Request, res: Response): Promise<void> {
-  const clinicId = requireClinicId(req);
-  const locations = await listLocations(clinicId);
+  const userId = requireUserId(req);
+  const locations = await listLocations(userId);
   res.json({ locations });
 }
 
@@ -105,14 +107,13 @@ export async function postSwitchLocation(req: Request, res: Response): Promise<v
     throw new HttpError(400, "targetClinicId is required", "VALIDATION_ERROR");
   }
 
-  // Always resolve from DB clinicId (not JWT) so switching works after a prior switch
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, role: true, clinicId: true },
+    select: { id: true, email: true, role: true },
   });
-  if (!user || !user.clinicId) throw new HttpError(403, "No clinic on this account", "FORBIDDEN");
+  if (!user) throw new HttpError(403, "User not found", "FORBIDDEN");
 
-  const clinic = await getLocationSwitchTarget(user.clinicId, targetClinicId);
+  const clinic = await getLocationSwitchTarget(userId, targetClinicId);
 
   const env = getEnv();
   const token = issueAccessToken(
@@ -122,4 +123,28 @@ export async function postSwitchLocation(req: Request, res: Response): Promise<v
 
   res.cookie(env.AUTH_COOKIE_NAME, token, authCookieOptions(env, env.JWT_SESSION_EXPIRES_IN));
   res.json({ clinic: { id: clinic.id, name: clinic.name, slug: clinic.slug } });
+}
+
+// ── Multi-clinic (user-owned) ─────────────────────────────────────────────────
+
+export async function getUserClinicsHandler(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const clinics = await getUserOwnedClinics(userId);
+  res.json({ clinics });
+}
+
+const CreateClinicBody = z.object({
+  clinicName: z.string().trim().min(2).max(200),
+  phone:      z.string().trim().min(4).max(32),
+  slug:       z.string().trim().min(2).max(60).regex(/^[a-z0-9-]+$/, "Slug may only contain lowercase letters, numbers and hyphens"),
+});
+
+export async function postCreateUserClinic(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const parsed = CreateClinicBody.safeParse(req.body);
+  if (!parsed.success) {
+    throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid body", "VALIDATION_ERROR");
+  }
+  const clinic = await createClinicForUser(userId, parsed.data);
+  res.status(201).json({ clinic });
 }

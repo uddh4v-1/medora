@@ -17,31 +17,51 @@ function fmtPrice(paise: number) {
 }
 
 function mapDynamic(plans: CustomPlan[]): PricingPlan[] {
-  return plans.map((p) => ({
-    name: p.name,
-    price: fmtPrice(p.price),
-    annualPrice: p.annualPrice != null ? fmtPrice(p.annualPrice) : null,
-    cadence: "/mo",
-    features: p.displayFeatures,
-    cta: p.ctaText ?? "Get started",
-    ctaVariant: p.highlighted ? ("primary" as const) : ("outline" as const),
-    highlighted: p.highlighted,
-    planId: p.planId ?? null,
-  }));
+  return plans.map((p) => {
+    const discountPct =
+      p.annualPrice != null && p.price > 0
+        ? Math.round((1 - p.annualPrice / p.price) * 100)
+        : null;
+    return {
+      name: p.name,
+      price: fmtPrice(p.price),
+      annualPrice: p.annualPrice != null ? fmtPrice(p.annualPrice) : null,
+      discountPct,
+      cadence: "/mo",
+      features: p.displayFeatures,
+      cta: p.ctaText ?? "Get started",
+      ctaVariant: p.highlighted ? ("primary" as const) : ("outline" as const),
+      highlighted: p.highlighted,
+      planId: p.planId ?? null,
+    };
+  });
+}
+
+function parsePriceStr(s: string): number {
+  return parseFloat(s.replace(/[₹,]/g, "")) || 0;
 }
 
 function mapStatic(): PricingPlan[] {
-  return staticPlans.map((p) => ({
-    name: p.name,
-    price: p.price,
-    annualPrice: p.annualPrice,
-    cadence: p.cadence,
-    features: p.features,
-    cta: p.cta,
-    ctaVariant: p.ctaVariant,
-    highlighted: p.highlighted,
-    planId: p.planId,
-  }));
+  return staticPlans.map((p) => {
+    const monthly = parsePriceStr(p.price);
+    const annual = p.annualPrice ? parsePriceStr(p.annualPrice) : null;
+    const discountPct =
+      annual != null && monthly > 0
+        ? Math.round((1 - annual / monthly) * 100)
+        : null;
+    return {
+      name: p.name,
+      price: p.price,
+      annualPrice: p.annualPrice ?? null,
+      discountPct,
+      cadence: p.cadence,
+      features: p.features,
+      cta: p.cta,
+      ctaVariant: p.ctaVariant,
+      highlighted: p.highlighted,
+      planId: p.planId,
+    };
+  });
 }
 
 async function fetchPricingPlans(): Promise<PricingPlan[]> {

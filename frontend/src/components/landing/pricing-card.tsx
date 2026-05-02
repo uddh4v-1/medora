@@ -13,6 +13,7 @@ export type PricingCardProps = {
   name: string;
   price: string;
   annualPrice: string | null;
+  discountPct?: number | null;
   cadence: string;
   features: string[];
   cta: string;

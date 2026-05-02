@@ -49,22 +49,23 @@ function yyyyMmDd(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function fetchDashboardOverview(clinicId: string) {
+export async function fetchDashboardOverview(clinicId: string, doctorId?: string) {
   const now = new Date();
   const today = yyyyMmDd(now);
   const start = asDateStart(today);
   const end = asDateEnd(today);
+  const docFilter = doctorId ? { doctorId } : {};
 
   const [appointmentsToday, waitingCount, inProgressVisit, patientsTotal, unpaidCount] =
     await Promise.all([
       prisma.appointment.count({
-        where: { clinicId, date: { gte: start, lte: end } },
+        where: { clinicId, date: { gte: start, lte: end }, ...docFilter },
       }),
       prisma.visit.count({
-        where: { clinicId, status: "waiting" },
+        where: { clinicId, status: "waiting", ...docFilter },
       }),
       prisma.visit.findFirst({
-        where: { clinicId, status: "in_progress" },
+        where: { clinicId, status: "in_progress", ...docFilter },
         orderBy: { startedAt: "asc" },
         include: {
           patient: { select: { id: true, name: true } },
@@ -80,7 +81,7 @@ export async function fetchDashboardOverview(clinicId: string) {
     ]);
 
   const todayScheduleRows = await prisma.appointment.findMany({
-    where: { clinicId, date: { gte: start, lte: end } },
+    where: { clinicId, date: { gte: start, lte: end }, ...docFilter },
     orderBy: [{ startTime: "asc" }],
     take: 8,
     include: {
@@ -200,13 +201,15 @@ export async function fetchPatients(clinicId: string, query: PatientsQuery) {
   };
 }
 
-export async function fetchQueue(clinicId: string, query: QueueQuery) {
+export async function fetchQueue(clinicId: string, query: QueueQuery, doctorId?: string) {
   const statusFilter = query.status ? toDbVisitStatus(query.status) : undefined;
+  const docFilter = doctorId ? { doctorId } : {};
 
   const [rows, waiting, inProgress, completed] = await Promise.all([
     prisma.visit.findMany({
       where: {
         clinicId,
+        ...docFilter,
         ...(statusFilter ? { status: statusFilter } : {}),
       },
       orderBy: [{ startedAt: "asc" }],
@@ -215,9 +218,9 @@ export async function fetchQueue(clinicId: string, query: QueueQuery) {
         doctor: { select: { id: true, name: true } },
       },
     }),
-    prisma.visit.count({ where: { clinicId, status: "waiting" } }),
-    prisma.visit.count({ where: { clinicId, status: "in_progress" } }),
-    prisma.visit.count({ where: { clinicId, status: "completed" } }),
+    prisma.visit.count({ where: { clinicId, status: "waiting", ...docFilter } }),
+    prisma.visit.count({ where: { clinicId, status: "in_progress", ...docFilter } }),
+    prisma.visit.count({ where: { clinicId, status: "completed", ...docFilter } }),
   ]);
 
   return {

@@ -309,6 +309,10 @@ export async function registerClinicOwner(input: {
         },
       });
 
+      await tx.userClinic.create({
+        data: { userId: userRow.id, clinicId: clinic.id, role: "owner" },
+      });
+
       return { userRow };
     });
 

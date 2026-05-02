@@ -113,7 +113,7 @@ export default function SubscriptionPage() {
     });
   }, []);
 
-  async function handleUpgrade(planId: PlanId, planName: string) {
+  async function handleUpgrade(planId: PlanId, planName: string, isAnnual: boolean) {
     setLoading(planId);
     try {
       const scriptLoaded = await loadRazorpayScript();
@@ -123,7 +123,7 @@ export default function SubscriptionPage() {
         return;
       }
 
-      const orderRes = await createOrder(planId);
+      const orderRes = await createOrder(planId, isAnnual);
       if (!orderRes.ok) {
         toast.error("Failed to create payment order. Please try again.");
         setLoading(null);
@@ -132,7 +132,7 @@ export default function SubscriptionPage() {
 
       const { orderId, amount, currency, keyId, planLabel } = orderRes.data;
 
-      const callbackUrl = `${window.location.origin}/dashboard/subscription/payment-callback?plan=${planId}`;
+      const callbackUrl = `${window.location.origin}/dashboard/subscription/payment-callback?plan=${planId}${isAnnual ? "&annual=true" : ""}`;
 
       const rzp = new window.Razorpay({
         key: keyId,
@@ -140,13 +140,14 @@ export default function SubscriptionPage() {
         currency,
         order_id: orderId,
         name: "Medora",
-        description: `${planLabel} Plan — Monthly`,
+        description: `${planLabel} Plan — ${isAnnual ? "Annual" : "Monthly"}`,
         prefill: { name: displayName, email: session?.email },
         theme: { color: "#0f172a" },
         callback_url: callbackUrl,
         handler: async (response) => {
           const verifyRes = await verifyPayment({
             plan: planId,
+            annual: isAnnual,
             razorpayOrderId: response.razorpay_order_id,
             razorpayPaymentId: response.razorpay_payment_id,
             razorpaySignature: response.razorpay_signature,
@@ -177,6 +178,10 @@ export default function SubscriptionPage() {
   const isOnTrial = subscription?.billingStatus === "trial";
   const isTestMode = billingConfig?.isTestMode ?? false;
   const hasAnnual = plans.some((p) => p.annualPrice != null);
+  const annualDiscountPct = plans.reduce((max, p) => {
+    if (p.annualPrice == null || p.price === 0) return max;
+    return Math.max(max, Math.round((1 - p.annualPrice / p.price) * 100));
+  }, 0);
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 md:px-8">
@@ -258,9 +263,11 @@ export default function SubscriptionPage() {
           </button>
           <span className={cn("text-sm", annual ? "font-medium text-foreground" : "text-muted-foreground")}>
             Annual
-            <span className="ml-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              Save 20%
-            </span>
+            {annualDiscountPct > 0 && (
+              <span className="ml-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                Save {annualDiscountPct}%
+              </span>
+            )}
           </span>
         </div>
       )}
@@ -314,7 +321,7 @@ export default function SubscriptionPage() {
                 <div className="mt-auto pt-2">
                   {plan.planId && (plan.planId === "starter" || plan.planId === "pro") ? (
                     <button
-                      onClick={() => handleUpgrade(plan.planId as PlanId, plan.name)}
+                      onClick={() => handleUpgrade(plan.planId as PlanId, plan.name, annual)}
                       disabled={isCurrentPlan || loading !== null || !billingConfig || billingConfig.configured === false}
                       className={cn(
                         "flex h-10 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-60",

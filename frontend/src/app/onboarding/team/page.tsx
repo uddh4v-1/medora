@@ -39,6 +39,7 @@ export default function TeamPage() {
     })),
   );
   const setTeam = useOnboardingStore((s) => s.setTeam);
+  const publish = useOnboardingStore((s) => s.publish);
 
   const [mode, setMode] = useState<"solo" | "team">(initial.teamMode);
   const [invitees, setInvitees] = useState<Invitee[]>(
@@ -72,19 +73,20 @@ export default function TeamPage() {
             (i) => i.name.trim().length > 0 && /\S+@\S+\.\S+/.test(i.email),
           );
     setTeam({ teamMode: mode, invitees: cleaned });
+    publish();
     if (cleaned.length > 0) {
       toast.success(`${cleaned.length} invite${cleaned.length === 1 ? "" : "s"} ready`, {
-        description: "We'll email each setup link when you publish.",
+        description: "We'll email each a setup link shortly.",
       });
     }
-    router.push("/onboarding/services");
+    router.push("/onboarding/done");
   }
 
   return (
     <OnboardingShell step="team">
       <header className="mb-7">
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-brand">
-          Step 3 of 5
+          Step 2 of 2
         </p>
         <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           Who else works here?
@@ -153,7 +155,7 @@ export default function TeamPage() {
         <WizardCard
           className="mt-5"
           title="Solo clinic — got it"
-          description="You'll be set up as the doctor. We'll let you set your fee in the next step."
+          description="You'll be set up as the doctor. Set your fee and hours from Settings later."
         >
           <div className="flex items-center gap-3 rounded-lg bg-brand/5 p-4 ring-1 ring-brand/15">
             <span className="flex size-10 items-center justify-center rounded-full bg-brand/10 text-brand">
@@ -174,6 +176,7 @@ export default function TeamPage() {
 
       <WizardFooter
         backHref="/onboarding/profile"
+        primaryLabel="Finish setup"
         primaryDisabled={!hasValidRow}
         onPrimary={handleContinue}
       />

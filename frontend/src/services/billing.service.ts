@@ -41,12 +41,16 @@ export async function getBillingConfig() {
   return apiGet<BillingConfig>("/api/billing/config");
 }
 
-export async function createOrder(plan: PlanId) {
-  return apiPost<RazorpayOrder, { plan: PlanId }>("/api/billing/orders", { plan });
+export async function createOrder(plan: PlanId, annual?: boolean) {
+  return apiPost<RazorpayOrder, { plan: PlanId; annual?: boolean }>("/api/billing/orders", {
+    plan,
+    ...(annual !== undefined && { annual }),
+  });
 }
 
 export async function verifyPayment(params: {
   plan: PlanId;
+  annual?: boolean;
   razorpayOrderId: string;
   razorpayPaymentId: string;
   razorpaySignature: string;

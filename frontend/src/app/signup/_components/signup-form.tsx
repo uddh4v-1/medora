@@ -88,10 +88,10 @@ export function SignupForm() {
         ownerEmail: email.trim().toLowerCase(),
         slug,
       });
-      toast.success("Welcome to Medora", {
-        description: "Let's verify your email and you're off.",
+      toast.success("Welcome to Medora!", {
+        description: "Your clinic is ready. Complete your profile in Settings.",
       });
-      router.push("/onboarding/verify-email");
+      router.push("/dashboard");
     } catch {
       toast.error("Network error — try again.");
     } finally {
@@ -115,7 +115,7 @@ export function SignupForm() {
             Set up your clinic
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Takes about 5 minutes. No card needed.
+            Set up your clinic in 30 seconds. No card needed.
           </p>
         </header>
 
@@ -190,7 +190,7 @@ export function SignupForm() {
               type="checkbox"
               checked={agree}
               onChange={(e) => setAgree(e.target.checked)}
-              className="mt-0.5 size-3.5 accent-[var(--brand)]"
+              className="mt-0.5 size-3.5 accent-brand"
             />
             <span>
               I agree to Medora&apos;s{" "}

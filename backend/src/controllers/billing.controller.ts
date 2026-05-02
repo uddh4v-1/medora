@@ -28,7 +28,8 @@ export function getBillingConfigHandler(_req: Request, res: Response): void {
 }
 
 const CreateOrderBody = z.object({
-  plan: z.enum(["starter", "pro"]),
+  plan:   z.enum(["starter", "pro"]),
+  annual: z.boolean().optional(),
 });
 
 export async function createOrderHandler(req: Request, res: Response): Promise<void> {
@@ -37,13 +38,14 @@ export async function createOrderHandler(req: Request, res: Response): Promise<v
   if (!parsed.success) {
     throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid body", "VALIDATION_ERROR");
   }
-  const order = await createRazorpayOrder(clinicId, parsed.data.plan);
+  const order = await createRazorpayOrder(clinicId, parsed.data.plan, parsed.data.annual ?? false);
   const env = getEnv();
   res.status(201).json({ ...order, keyId: env.Test_Key_ID });
 }
 
 const VerifyBody = z.object({
   plan:                z.enum(["starter", "pro"]),
+  annual:              z.boolean().optional(),
   razorpayOrderId:     z.string().min(1),
   razorpayPaymentId:   z.string().min(1),
   razorpaySignature:   z.string().min(1),

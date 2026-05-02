@@ -30,7 +30,7 @@ export function OnboardingSidePanel({ current }: Props) {
 
       <div className="max-w-md">
         <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-brand-foreground/60">
-          {meta ? `Step ${meta.index} of 5` : "Welcome"}
+          {meta ? `Step ${meta.index} of ${WIZARD_STEPS.length}` : "Welcome"}
         </p>
         <h2 className="mt-4 text-balance text-4xl font-semibold leading-[1.1] tracking-tight md:text-[42px]">
           {meta ? meta.panelHeadline : "Let's set up your clinic."}
@@ -38,7 +38,7 @@ export function OnboardingSidePanel({ current }: Props) {
         <p className="mt-5 max-w-sm text-sm leading-relaxed text-brand-foreground/75">
           {meta
             ? meta.panelBody
-            : "It takes about five minutes. We'll save your progress as you go."}
+            : "Just two quick steps. We'll save your progress as you go."}
         </p>
 
         <ul className="mt-9 space-y-3">

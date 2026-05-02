@@ -4,7 +4,7 @@ import { Stethoscope } from "lucide-react";
 import Link from "next/link";
 
 import { siteConfig } from "@/lib/site-content";
-import { type OnboardingStep, useOnboardingStore } from "@/stores/onboarding-store";
+import { type OnboardingStep, WIZARD_STEPS, useOnboardingStore } from "@/stores/onboarding-store";
 
 import { OnboardingSidePanel } from "./onboarding-side-panel";
 import { OnboardingStepper } from "./onboarding-stepper";
@@ -43,7 +43,7 @@ export function OnboardingShell({ step, children }: Props) {
           <div className="flex items-center gap-4">
             {meta && (
               <span className="hidden text-xs font-medium text-muted-foreground sm:inline lg:hidden">
-                Step {meta.index} of 5
+                Step {meta.index} of {WIZARD_STEPS.length}
               </span>
             )}
             <SaveAndExit />
