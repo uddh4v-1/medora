@@ -28,15 +28,12 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   "done",
 ];
 
-// The 5 wizard "stops" between signup and done — these are what the stepper
+// The 2 wizard "stops" between signup and done — these are what the stepper
 // dots represent. Signup is its own page (pre-wizard) and done is the
 // celebration page.
 export const WIZARD_STEPS: OnboardingStep[] = [
-  "verify-email",
   "profile",
   "team",
-  "services",
-  "review",
 ];
 
 export type WeekDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -218,7 +215,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setSignup: (data) =>
         set((s) => ({
           ...data,
-          furthestStep: maxStep(s.furthestStep, "verify-email"),
+          furthestStep: maxStep(s.furthestStep, "profile"),
         })),
 
       verifyEmail: () =>
@@ -262,7 +259,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         set((s) => ({
           ...data,
           doctorServices: next,
-          furthestStep: maxStep(s.furthestStep, "services"),
+          furthestStep: maxStep(s.furthestStep, "done"),
         }));
       },
 

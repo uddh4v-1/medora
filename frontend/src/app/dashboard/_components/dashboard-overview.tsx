@@ -22,6 +22,7 @@ import { ActivityFeed } from "./activity-feed";
 import { AiInsight } from "./ai-insight";
 import { NowServingMini } from "./now-serving-mini";
 import { DashboardPageHeader } from "./page-header";
+import { ProfileCompletionCard } from "./profile-completion-card";
 import { QuickActions } from "./quick-actions";
 import { StatCard } from "./stat-card";
 import { DashboardOverviewSkeleton } from "./dashboard-overview-skeleton";
@@ -121,6 +122,8 @@ export function DashboardOverview() {
           </>
         }
       />
+
+      <ProfileCompletionCard />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (

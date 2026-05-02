@@ -18,6 +18,10 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
   const router = useRouter();
   const [annual, setAnnual] = useState(false);
   const hasAnnual = plans.some((p) => p.annualPrice != null);
+  const maxDiscountPct = plans.reduce(
+    (max, p) => Math.max(max, p.discountPct ?? 0),
+    0,
+  );
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
@@ -76,9 +80,11 @@ export function PricingSection({ plans }: { plans: PricingPlan[] }) {
           </button>
           <span className={`text-sm ${annual ? "font-medium text-foreground" : "text-muted-foreground"}`}>
             Annual
-            <span className="ml-1.5 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
-              Save 20%
-            </span>
+            {maxDiscountPct > 0 && (
+              <span className="ml-1.5 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
+                Save {maxDiscountPct}%
+              </span>
+            )}
           </span>
         </div>
       )}

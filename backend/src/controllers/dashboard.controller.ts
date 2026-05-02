@@ -15,7 +15,8 @@ function requireClinicId(req: Request): string {
 
 export async function getDashboardOverview(req: Request, res: Response): Promise<void> {
   const clinicId = requireClinicId(req);
-  const data = await fetchDashboardOverview(clinicId);
+  const doctorId = req.auth?.role === "Doctor" ? req.auth.userId : undefined;
+  const data = await fetchDashboardOverview(clinicId, doctorId);
   res.status(200).json(data);
 }
 
@@ -41,7 +42,8 @@ export async function getQueue(req: Request, res: Response): Promise<void> {
     throw new HttpError(400, msg, "VALIDATION_ERROR");
   }
 
-  const data = await fetchQueue(clinicId, parsed.data);
+  const doctorId = req.auth?.role === "Doctor" ? req.auth.userId : undefined;
+  const data = await fetchQueue(clinicId, parsed.data, doctorId);
   res.status(200).json(data);
 }
 

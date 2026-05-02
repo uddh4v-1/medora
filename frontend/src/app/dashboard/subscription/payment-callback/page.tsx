@@ -18,6 +18,7 @@ export default function PaymentCallbackPage() {
     ran.current = true;
 
     const plan = params.get("plan") as PlanId | null;
+    const annual = params.get("annual") === "true";
     const razorpayOrderId = params.get("razorpay_order_id");
     const razorpayPaymentId = params.get("razorpay_payment_id");
     const razorpaySignature = params.get("razorpay_signature");
@@ -28,7 +29,7 @@ export default function PaymentCallbackPage() {
       return;
     }
 
-    verifyPayment({ plan, razorpayOrderId, razorpayPaymentId, razorpaySignature })
+    verifyPayment({ plan, annual, razorpayOrderId, razorpayPaymentId, razorpaySignature })
       .then((res) => {
         if (res.ok) {
           setSubscription(res.data.subscription as SubscriptionStatus);

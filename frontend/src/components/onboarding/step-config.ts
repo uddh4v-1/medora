@@ -39,7 +39,7 @@ export const STEP_META: Record<
   },
   profile: {
     step: "profile",
-    index: 2,
+    index: 1,
     href: "/onboarding/profile",
     title: "Tell us about your clinic",
     shortLabel: "Clinic",
@@ -47,11 +47,11 @@ export const STEP_META: Record<
     icon: Building2,
     panelHeadline: "Your front door, online.",
     panelBody:
-      "Logo, address and working hours flow into your booking page, prescriptions and invoices.",
+      "Just your city and specialties to start — you can add your full address, logo and hours from Settings anytime.",
   },
   team: {
     step: "team",
-    index: 3,
+    index: 2,
     href: "/onboarding/team",
     title: "Who else works here?",
     shortLabel: "Team",

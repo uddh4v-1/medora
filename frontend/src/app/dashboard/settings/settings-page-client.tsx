@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
   Tabs,
   TabsContent,
@@ -16,8 +17,14 @@ import { ProfileSettings } from "./_components/profile-settings";
 import { PublicBookingSettings } from "./_components/public-booking-settings";
 import { TeamSettings } from "./_components/team-settings";
 
+const VALID_TABS = ["profile", "team", "public-booking", "appearance", "branding", "data-export"];
+
 export function SettingsPageClient() {
   const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") ?? "";
+  const defaultTab = VALID_TABS.includes(tabParam) ? tabParam : "profile";
+
   return (
     <div className="flex flex-col gap-5 px-6 py-6 md:px-8">
       <DashboardPageHeader
@@ -25,7 +32,7 @@ export function SettingsPageClient() {
         title={t("settings.title")}
       />
 
-      <Tabs defaultValue="profile" className="gap-4">
+      <Tabs defaultValue={defaultTab} className="gap-4">
         <TabsList>
           <TabsTrigger value="profile">{t("settings.tabProfile")}</TabsTrigger>
           <TabsTrigger value="team">{t("settings.tabTeam")}</TabsTrigger>

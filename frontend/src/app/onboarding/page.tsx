@@ -23,9 +23,12 @@ export default function OnboardingIndex() {
       router.replace("/signup");
       return;
     }
+    // "verify-email", "services", "review" are no longer part of the flow —
+    // redirect users who have those stored as furthestStep to profile.
+    const legacySteps = new Set(["verify-email", "services", "review"]);
     const next =
-      furthest === "signup"
-        ? "/onboarding/verify-email"
+      furthest === "signup" || legacySteps.has(furthest)
+        ? "/onboarding/profile"
         : furthest === "done"
           ? "/onboarding/done"
           : `/onboarding/${furthest}`;

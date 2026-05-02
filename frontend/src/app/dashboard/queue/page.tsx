@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -9,6 +9,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   type Visit,
   type VisitStatus,
@@ -58,17 +65,34 @@ function sortVisits(list: Visit[]) {
   });
 }
 
-function nowIso() {
-  return new Date().toISOString().slice(0, 19);
-}
-
 export default function QueuePage() {
   const hydrated = useHydrated();
   const visitsRaw = useClinicStore((s) => s.visits);
+  const session = useClinicStore((s) => s.session);
   const addVisit = useClinicStore((s) => s.addVisit);
   const setVisitStatus = useClinicStore((s) => s.setVisitStatus);
 
-  const visits = useMemo(() => sortVisits(visitsRaw), [visitsRaw]);
+  const isDoctor = session?.role === "Doctor";
+
+  // Unique doctor names for the filter dropdown — shown only to Owner/Receptionist
+  const doctorOptions = useMemo(() => {
+    const names = [
+      ...new Set(
+        visitsRaw.map((v) => v.doctor).filter((d) => d !== "Unassigned"),
+      ),
+    ].sort();
+    return names;
+  }, [visitsRaw]);
+
+  const showDoctorFilter = !isDoctor && doctorOptions.length > 1;
+  const [selectedDoctor, setSelectedDoctor] = useState<string>("all");
+
+  const filteredVisits = useMemo(() => {
+    if (selectedDoctor === "all") return visitsRaw;
+    return visitsRaw.filter((v) => v.doctor === selectedDoctor);
+  }, [visitsRaw, selectedDoctor]);
+
+  const visits = useMemo(() => sortVisits(filteredVisits), [filteredVisits]);
 
   const counts = useMemo(
     () => ({
@@ -138,7 +162,26 @@ export default function QueuePage() {
       <DashboardPageHeader
         eyebrow="Today's flow"
         title="Queue"
-        actions={<AddToQueueDialog onCreate={handleCreate} />}
+        actions={
+          <div className="flex items-center gap-3">
+            {showDoctorFilter && (
+              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                <SelectTrigger className="h-9 w-44 rounded-lg border-border bg-card text-sm">
+                  <SelectValue placeholder="All doctors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All doctors</SelectItem>
+                  {doctorOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <AddToQueueDialog onCreate={handleCreate} />
+          </div>
+        }
       />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
