@@ -7,9 +7,9 @@ let client: Razorpay | null = null;
 export function getRazorpay(): Razorpay {
   if (client) return client;
   const env = getEnv();
-  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
+  if (!env.Test_Key_ID || !env.Test_Key_Secret) {
     throw new HttpError(503, "Payment gateway is not configured", "PAYMENT_NOT_CONFIGURED");
   }
-  client = new Razorpay({ key_id: env.RAZORPAY_KEY_ID, key_secret: env.RAZORPAY_KEY_SECRET });
+  client = new Razorpay({ key_id: env.Test_Key_ID, key_secret: env.Test_Key_Secret });
   return client;
 }

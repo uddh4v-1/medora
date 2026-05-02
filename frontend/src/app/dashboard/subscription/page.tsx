@@ -190,11 +190,11 @@ export default function SubscriptionPage() {
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
           Razorpay keys are not configured. Add{" "}
           <code className="rounded bg-amber-100 px-1 font-mono text-xs dark:bg-amber-950">
-            RAZORPAY_KEY_ID
+            Test_Key_ID
           </code>{" "}
           and{" "}
           <code className="rounded bg-amber-100 px-1 font-mono text-xs dark:bg-amber-950">
-            RAZORPAY_KEY_SECRET
+            Test_Key_Secret
           </code>{" "}
           to your backend <code className="font-mono text-xs">.env</code>.
         </div>

@@ -19,7 +19,7 @@ export async function getSubscriptionHandler(req: Request, res: Response): Promi
 
 export function getBillingConfigHandler(_req: Request, res: Response): void {
   const env = getEnv();
-  const keyId = env.RAZORPAY_KEY_ID ?? null;
+  const keyId = env.Test_Key_ID ?? null;
   res.json({
     keyId,
     isTestMode: keyId?.startsWith("rzp_test_") ?? false,
@@ -39,7 +39,7 @@ export async function createOrderHandler(req: Request, res: Response): Promise<v
   }
   const order = await createRazorpayOrder(clinicId, parsed.data.plan);
   const env = getEnv();
-  res.status(201).json({ ...order, keyId: env.RAZORPAY_KEY_ID });
+  res.status(201).json({ ...order, keyId: env.Test_Key_ID });
 }
 
 const VerifyBody = z.object({

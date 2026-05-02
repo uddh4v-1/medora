@@ -52,8 +52,8 @@ const envSchema = z.object({
   MAIL_FROM: z.string().optional(),
 
   /** Razorpay payment gateway credentials */
-  RAZORPAY_KEY_ID: z.string().optional(),
-  RAZORPAY_KEY_SECRET: z.string().optional(),
+  Test_Key_ID: z.string().optional(),
+  Test_Key_Secret: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

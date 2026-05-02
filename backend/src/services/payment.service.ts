@@ -58,12 +58,12 @@ export async function verifyAndActivate(params: {
   razorpaySignature: string;
 }) {
   const env = getEnv();
-  if (!env.RAZORPAY_KEY_SECRET) {
+  if (!env.Test_Key_Secret) {
     throw new HttpError(503, "Payment gateway is not configured", "PAYMENT_NOT_CONFIGURED");
   }
 
   const expectedSignature = crypto
-    .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
+    .createHmac("sha256", env.Test_Key_Secret)
     .update(`${params.razorpayOrderId}|${params.razorpayPaymentId}`)
     .digest("hex");
 
