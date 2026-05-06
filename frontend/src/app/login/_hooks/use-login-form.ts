@@ -36,68 +36,71 @@ export function useLoginForm() {
   }, []);
 
   const onSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      if (!email.trim() || !password.trim() || isSubmitting) return;
+  async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-      setIsSubmitting(true);
-      try {
-        const { ok, data } = await postLogin({
-          email,
-          password,
-          rememberMe,
-        });
+    if (!email.trim() || !password.trim() || isSubmitting) return;
 
-        if (
-          ok &&
-          data.user?.email &&
-          data.signedInAt &&
-          data.user.role &&
-          typeof data.user.id === "string"
-        ) {
-          signIn({
-            email: data.user.email,
-            role: data.user.role,
-            signedInAt: data.signedInAt,
-            userId: data.user.id,
-            name: data.user.name ?? "",
-            clinic: data.user.clinic ?? null,
-          });
-          toast.success(t("auth.welcomeToast"), {
-            description: data.user.email,
-          });
-          router.push("/dashboard");
-          return;
-        }
+    setIsSubmitting(true);
 
-        if (data.code === "MAINTENANCE_MODE") {
+    try {
+      const { ok, data } = await postLogin({
+        email,
+        password,
+        rememberMe,
+      });
+
+      // ❌ If request failed
+      if (!ok || !data?.user) {
+        if (data?.code === "MAINTENANCE_MODE") {
           toast.error("Platform is under maintenance. Please try again later.");
         } else {
-          toast.error(data.error ?? t("auth.loginFailed"));
+          toast.error(data?.error ?? t("auth.loginFailed"));
         }
-      } catch (error: unknown) {
-        const offline =
-          axios.isAxiosError(error) &&
-          (error.code === "ERR_NETWORK" ||
-            error.message === "Network Error");
-
-        toast.error(
-          offline ? t("auth.networkUnreachable") : t("auth.loginFailed"),
-        );
-      } finally {
-        setIsSubmitting(false);
+        return;
       }
-    },
-    [
-      email,
-      password,
-      rememberMe,
-      isSubmitting,
-      router,
-      signIn,
-      t,
-    ],
-  );
+
+      // ✅ Store user in global state
+      signIn({
+        email: data.user.email,
+        role: data.user.role,
+        signedInAt: data.signedInAt ?? new Date().toISOString(),
+        userId: data.user.id,
+        name: data.user.name ?? "",
+        clinic: data.user.clinic ?? null,
+      });
+
+      toast.success(t("auth.welcomeToast"), {
+        description: data.user.email,
+      });
+
+      // ✅ Force navigation AFTER state update
+      setTimeout(() => {
+        router.replace("/dashboard");
+      }, 50);
+    } catch (error: unknown) {
+      const offline =
+        axios.isAxiosError(error) &&
+        (error.code === "ERR_NETWORK" ||
+          error.message === "Network Error");
+
+      toast.error(
+        offline ? t("auth.networkUnreachable") : t("auth.loginFailed")
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  },
+  [
+    email,
+    password,
+    rememberMe,
+    isSubmitting,
+    router,
+    signIn,
+    t,
+  ]
+);
 
   return {
     t,
