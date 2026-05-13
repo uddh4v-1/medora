@@ -113,6 +113,9 @@ const en: Pack = {
   "appearance.systemDesc": "Match device settings",
   "appearance.usingDevice":
     "Currently using {{theme}} based on your device settings.",
+  "appearance.palette": "Color palette",
+  "appearance.paletteDesc":
+    "Pick a color palette. The light/dark toggle keeps working inside your chosen palette.",
 
   "profile.clinicName": "Clinic name",
   "profile.gst": "GST",
@@ -417,6 +420,9 @@ const hi: Pack = {
   "appearance.system": "सिस्टम",
   "appearance.systemDesc": "डिवाइस सेटिंग मिलाएं",
   "appearance.usingDevice": "डिवाइस सेटिंग के अनुसार अभी {{theme}} चल रहा है।",
+  "appearance.palette": "रंग पैलेट",
+  "appearance.paletteDesc":
+    "एक कलर पैलेट चुनें। आपके चुने पैलेट में लाइट/डार्क टॉगल वैसा ही काम करेगा।",
 
   "profile.clinicName": "क्लिनिक का नाम",
   "profile.gst": "जीएसटी",
@@ -675,6 +681,9 @@ const mr: Pack = {
   "appearance.system": "सिस्टम",
   "appearance.systemDesc": "डिव्हाइस सारखे",
   "appearance.usingDevice": "डिव्हाइस सेटिंगनुसार सध्या {{theme}} वापरत आहात.",
+  "appearance.palette": "रंग पॅलेट",
+  "appearance.paletteDesc":
+    "एक कलर पॅलेट निवडा. लाइट/डार्क टॉगल तुमच्या निवडलेल्या पॅलेटमध्ये काम करेल.",
 
   "profile.clinicName": "क्लिनिकचे नाव",
   "profile.gst": "जीएसटी",
