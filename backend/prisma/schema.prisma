@@ -64,6 +64,7 @@ model Clinic {
   supportTickets   SupportTicket[]
   paymentRecords   PaymentRecord[]
   deletionRequests DataDeletionRequest[]
+  auditLogs        AuditLog[]
 
   @@map("clinics")
 }
@@ -294,6 +295,7 @@ model AuditLog {
   userId    String?  @map("user_id")
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   clinicId  String?  @map("clinic_id")
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   action    String   @db.VarChar(64)
   resource  String   @db.Text
   metadata  Json?
