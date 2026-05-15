@@ -106,8 +106,8 @@ export async function setClinicStatusHandler(req: Request, res: Response): Promi
 export async function deleteClinicHandler(req: Request, res: Response): Promise<void> {
   const params = clinicIdParamSchema.safeParse(req.params);
   if (!params.success) throw new HttpError(400, "Missing clinic id", "VALIDATION_ERROR");
-  const data = await deleteClinic(params.data.id);
-  res.status(200).json(data);
+  await deleteClinic(params.data.id);
+  res.status(204).end();
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────

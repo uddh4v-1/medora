@@ -359,7 +359,7 @@ export default function ClinicsPage() {
         </div>
       )}
 
-      {deleteConfirm && <div className="fixed inset-0 z-10" onClick={() => setDeleteConfirm(null)} />}
+      {/* Delete confirmation state is indicated by button color change */}
     </div>
   );
 }
