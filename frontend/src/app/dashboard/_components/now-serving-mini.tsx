@@ -6,6 +6,16 @@ import Link from "next/link";
 import type { Visit } from "@/lib/dashboard-content";
 import { useI18n } from "@/lib/i18n/provider";
 
+const styles = `
+  @keyframes breathe-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+  .animate-breathe-subtle {
+    animation: breathe-subtle 3s ease-in-out infinite;
+  }
+`;
+
 function avatarInitial(name: string) {
   const trimmed = name.trim();
   return trimmed ? trimmed[0]!.toUpperCase() : "?";
@@ -20,7 +30,8 @@ export function NowServingMini({
 }) {
   const { t } = useI18n();
   return (
-    <section className="relative flex h-full flex-col gap-4 overflow-hidden rounded-xl bg-brand p-5 text-brand-foreground shadow-brand-lg">
+    <section className="relative flex h-full flex-col gap-4 overflow-hidden rounded-xl bg-brand p-5 text-brand-foreground shadow-brand-lg animate-breathe-subtle">
+      <style>{styles}</style>
       <div
         aria-hidden
         className="pointer-events-none absolute -top-12 -right-10 size-32 rounded-full bg-white/8 blur-2xl"

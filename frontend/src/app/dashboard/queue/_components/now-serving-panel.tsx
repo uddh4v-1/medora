@@ -12,6 +12,16 @@ import { Button } from "@/components/ui/button";
 import type { Visit } from "@/lib/dashboard-content";
 import { cn } from "@/lib/utils";
 
+const styles = `
+  @keyframes breathe-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+  .animate-breathe-subtle {
+    animation: breathe-subtle 3s ease-in-out infinite;
+  }
+`;
+
 function avatarInitial(name: string) {
   const trimmed = name.trim();
   return trimmed ? trimmed[0]!.toUpperCase() : "?";
@@ -52,10 +62,11 @@ export function NowServingPanel({
   return (
     <div
       className={cn(
-        "relative flex flex-col gap-5 overflow-hidden rounded-2xl bg-brand p-6 text-brand-foreground shadow-brand-lg",
+        "relative flex flex-col gap-5 overflow-hidden rounded-2xl bg-brand p-6 text-brand-foreground shadow-brand-lg animate-breathe-subtle",
         className,
       )}
     >
+      <style>{styles}</style>
       <div
         aria-hidden
         className="pointer-events-none absolute -top-16 -right-16 size-48 rounded-full bg-white/8 blur-2xl"
