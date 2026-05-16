@@ -277,8 +277,18 @@ export default function SubscriptionPage() {
         {plans.map((plan) => {
           const isCurrentPlan = isActive && currentPlan === plan.planId;
           const displayPrice = annual && plan.annualPrice != null
-            ? fmtPrice(plan.annualPrice)
+            ? fmtPrice(plan.annualPrice * 12)
             : fmtPrice(plan.price);
+          const billingCycle = annual ? "/year" : "/mo";
+          
+          // Calculate original price for yearly and discount percentage
+          const originalYearlyPrice = annual && plan.annualPrice != null
+            ? fmtPrice(plan.price * 12)
+            : null;
+          const discountPct = annual && plan.annualPrice != null && plan.price > 0
+            ? Math.round((1 - plan.annualPrice / plan.price) * 100)
+            : null;
+          
           const ctaText = plan.ctaText ?? plan.name;
 
           return (
@@ -299,9 +309,26 @@ export default function SubscriptionPage() {
 
               <div className="px-5 pt-5 pb-1">
                 <p className="text-sm font-medium text-muted-foreground">{plan.name}</p>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-3xl font-semibold text-foreground">{displayPrice}</span>
-                  <span className="text-sm text-muted-foreground">/mo</span>
+                <div className="mt-3 flex flex-col gap-2">
+                  <div className="flex items-baseline gap-2">
+                    {originalYearlyPrice && (
+                      <span className="text-sm text-muted-foreground line-through">{originalYearlyPrice}</span>
+                    )}
+                    <span className="text-3xl font-semibold text-foreground">{displayPrice}</span>
+                    {discountPct && discountPct > 0 && (
+                      <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                        Save {discountPct}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">{billingCycle}</span>
+                    {annual && plan.annualPrice != null && (
+                      <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                        {fmtPrice(plan.annualPrice)}/month billed annually
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {plan.description && (
                   <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>

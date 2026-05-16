@@ -9,6 +9,14 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+function parsePrice(priceStr: string): number {
+  return parseFloat(priceStr.replace(/[₹,]/g, "")) || 0;
+}
+
+function formatPrice(price: number): string {
+  return `₹${Math.round(price).toLocaleString("en-IN")}`;
+}
+
 export type PricingCardProps = {
   name: string;
   price: string;
@@ -31,6 +39,7 @@ export function PricingCard({
   name,
   price,
   annualPrice,
+  discountPct,
   cadence,
   features,
   cta,
@@ -41,6 +50,15 @@ export function PricingCard({
   loading = false,
   disabled = false,
 }: PricingCardProps) {
+  const monthlyPrice = parsePrice(price);
+  const annualMonthlyPrice = annualPrice ? parsePrice(annualPrice) : null;
+  
+  // For annual: calculate original yearly (12 × monthly) and discounted yearly (12 × annual monthly)
+  const originalYearlyPrice = annual && annualMonthlyPrice != null ? formatPrice(monthlyPrice * 12) : null;
+  const displayYearlyPrice = annual && annualMonthlyPrice != null ? formatPrice(annualMonthlyPrice * 12) : null;
+  const displayCadence = annual ? "/year" : cadence;
+  const displayPrice = annual && annualMonthlyPrice != null ? displayYearlyPrice : price;
+  
   return (
     <Card
       className={cn(
@@ -54,11 +72,28 @@ export function PricingCard({
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {name}
         </CardTitle>
-        <div className="mt-3 flex items-baseline gap-1">
-          <span className="text-3xl font-semibold text-foreground">
-            {annual && annualPrice ? annualPrice : price}
-          </span>
-          <span className="text-sm text-muted-foreground">{cadence}</span>
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="flex items-baseline gap-2">
+            {originalYearlyPrice && (
+              <span className="text-sm text-muted-foreground line-through">{originalYearlyPrice}</span>
+            )}
+            <span className="text-3xl font-semibold text-foreground">
+              {displayPrice}
+            </span>
+            {annual && discountPct && discountPct > 0 && (
+              <span className="rounded-full bg-brand/10 px-2 py-1 text-xs font-semibold text-brand">
+                Save {discountPct}%
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">{displayCadence}</span>
+            {annual && annualPrice && (
+              <span className="rounded-md bg-brand/10 px-2 py-1 text-xs font-medium text-brand">
+                {annualPrice}/month billed annually
+              </span>
+            )}
+          </div>
         </div>
       </CardHeader>
 
