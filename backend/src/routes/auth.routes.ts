@@ -7,7 +7,7 @@ import {
   postLogin,
   postLogout,
   postRefreshToken,
-  postRegister,
+  register,
   postResetPassword,
   postSendVerification,
   postVerifyEmail,
@@ -24,7 +24,7 @@ import { asyncHandler } from "@/utils/async-handler";
 
 export const authRouter = Router();
 
-authRouter.post("/register", registerLimiter, asyncHandler(postRegister));
+authRouter.post("/register", registerLimiter, asyncHandler(register));
 authRouter.post("/login", loginLimiter, asyncHandler(postLogin));
 authRouter.get("/me", requireAuth, asyncHandler(getMe));
 authRouter.post("/logout", asyncHandler(postLogout));
