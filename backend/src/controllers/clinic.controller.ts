@@ -33,13 +33,14 @@ function requireUserId(req: Request): string {
   return userId;
 }
 
-export async function getClinicHandler(req: Request, res: Response): Promise<void> {
+export const getClinicHandler = async(req: Request, res: Response): Promise<void> => {
   const clinicId = requireClinicId(req);
+
   const data = await getClinic(clinicId);
   res.status(200).json(data);
 }
 
-export async function patchClinic(req: Request, res: Response): Promise<void> {
+export const patchClinic = async(req: Request, res: Response): Promise<void> => {
   const clinicId = requireClinicId(req);
   const parsed = updateClinicBodySchema.safeParse(req.body);
   if (!parsed.success) {
@@ -54,7 +55,7 @@ export async function patchClinic(req: Request, res: Response): Promise<void> {
 const EXPORT_TYPES = ["patients", "appointments", "prescriptions", "invoices"] as const;
 type ExportType = (typeof EXPORT_TYPES)[number];
 
-export async function exportClinicDataHandler(req: Request, res: Response): Promise<void> {
+export const exportClinicDataHandler = async(req: Request, res: Response): Promise<void> => {
   const clinicId = requireClinicId(req);
   const type = req.query.type as string;
   if (!EXPORT_TYPES.includes(type as ExportType)) {
@@ -83,13 +84,13 @@ const CreateBranchBody = z.object({
   city:    z.string().trim().max(100).optional(),
 });
 
-export async function getLocations(req: Request, res: Response): Promise<void> {
+export const getLocations = async(req: Request, res: Response): Promise<void> => {
   const userId = requireUserId(req);
   const locations = await listLocations(userId);
   res.json({ locations });
 }
 
-export async function postCreateBranch(req: Request, res: Response): Promise<void> {
+export const postCreateBranch = async(req: Request, res: Response): Promise<void> =>{
   const clinicId = requireClinicId(req);
   const parsed = CreateBranchBody.safeParse(req.body);
   if (!parsed.success) {
@@ -99,7 +100,7 @@ export async function postCreateBranch(req: Request, res: Response): Promise<voi
   res.status(201).json({ branch });
 }
 
-export async function postSwitchLocation(req: Request, res: Response): Promise<void> {
+export const postSwitchLocation = async(req: Request, res: Response): Promise<void> => {
   const userId = requireUserId(req);
 
   const { targetClinicId } = req.body as { targetClinicId?: unknown };
@@ -127,7 +128,7 @@ export async function postSwitchLocation(req: Request, res: Response): Promise<v
 
 // ── Multi-clinic (user-owned) ─────────────────────────────────────────────────
 
-export async function getUserClinicsHandler(req: Request, res: Response): Promise<void> {
+export const getUserClinicsHandler = async(req: Request, res: Response): Promise<void> => {
   const userId = requireUserId(req);
   const clinics = await getUserOwnedClinics(userId);
   res.json({ clinics });
@@ -139,7 +140,7 @@ const CreateClinicBody = z.object({
   slug:       z.string().trim().min(2).max(60).regex(/^[a-z0-9-]+$/, "Slug may only contain lowercase letters, numbers and hyphens"),
 });
 
-export async function postCreateUserClinic(req: Request, res: Response): Promise<void> {
+export const postCreateUserClinic = async(req: Request, res: Response): Promise<void> => {
   const userId = requireUserId(req);
   const parsed = CreateClinicBody.safeParse(req.body);
   if (!parsed.success) {

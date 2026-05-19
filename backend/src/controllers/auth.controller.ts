@@ -59,25 +59,34 @@ export const postLogin = async (req: Request, res: Response): Promise<void> => {
   res.status(200).json({ user: result.user, signedInAt: result.signedInAt });
 };
 
-export const postRegister = async (req: Request, res: Response): Promise<void> => {
-  const { clinicName, phone, ownerName, email, password, slug } = validateSchema(registerBodySchema.safeParse(req.body));
-  const env = getEnv();
-  const result = await registerClinicOwner({ clinicName, phone, ownerName, email, password, slug });
+export const register = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { clinicName, phone, ownerName, email, password, slug } = validateSchema(registerBodySchema.safeParse(req.body));
+    const env = getEnv();
+    const result = await registerClinicOwner({ clinicName, phone, ownerName, email, password, slug });
 
-  const accessToken = issueAccessToken(
-    { id: result.user.id, email: result.user.email, role: result.user.role, clinicId: result.user.clinic?.id },
-    { expiresIn: env.JWT_ACCESS_EXPIRES_IN },
-  );
-  const rawRefresh = await createRefreshToken(result.user.id, false);
+    if(!result){
+      throw new HttpError(401, "Fail to Register", "REGISTRATION_FAILED");
+    }
 
-  setAuthCookies(res, accessToken, rawRefresh, false);
+    const accessToken = issueAccessToken(
+      { id: result.user.id, email: result.user.email, role: result.user.role, clinicId: result.user.clinic?.id },
+      { expiresIn: env.JWT_ACCESS_EXPIRES_IN },
+    );
+    const rawRefresh = await createRefreshToken(result.user.id, false);
 
-  // Fire-and-forget — email failure must not block registration
-  requestEmailVerification(result.user.id).catch((err) =>
-    console.error("[register] verification email failed:", err),
-  );
+    setAuthCookies(res, accessToken, rawRefresh, false);
 
-  res.status(201).json({ user: result.user, signedInAt: result.signedInAt });
+    // Fire-and-forget — email failure must not block registration
+    requestEmailVerification(result.user.id).catch((err) =>
+      console.error("[register] verification email failed:", err),
+    );
+
+    res.status(201).json({ user: result.user, signedInAt: result.signedInAt });
+  } catch (error) {
+    throw new HttpError(500, "Internal Server Error", "INTERNAL_SERVER_ERROR");
+  }
+  
 };
 
 export const getMe = async (req: Request, res: Response): Promise<void> => {
