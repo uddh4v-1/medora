@@ -187,8 +187,10 @@ export function DashboardSidebar() {
                 aria-label="Switch clinic"
                 title={collapsed ? clinicName : undefined}
                 className={cn(
-                  "flex w-full items-center rounded-md text-left transition-colors hover:bg-sidebar-accent",
-                  collapsed ? "justify-center p-1.5" : "gap-2 px-2 py-2",
+                  "flex items-center rounded-md text-left transition-colors hover:bg-sidebar-accent",
+                  collapsed
+                    ? "mx-auto size-10 justify-center"
+                    : "w-full gap-2 px-2 py-2",
                 )}
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-brand">
@@ -311,8 +313,10 @@ export function DashboardSidebar() {
                 href={item.href}
                 title={collapsed ? label : undefined}
                 className={cn(
-                  "flex h-9 items-center rounded-md text-sm font-medium transition-colors",
-                  collapsed ? "justify-center px-0" : "gap-2.5 px-3",
+                  "flex items-center rounded-md text-sm font-medium transition-colors",
+                  collapsed
+                    ? "mx-auto size-10 justify-center"
+                    : "h-9 gap-2.5 px-3",
                   isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-brand"
                     : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
@@ -357,7 +361,9 @@ export function DashboardSidebar() {
                 title={collapsed ? displayName : undefined}
                 className={cn(
                   "flex items-center rounded-md text-left transition-colors hover:bg-sidebar-accent",
-                  collapsed ? "justify-center p-1.5" : "gap-2.5 px-2 py-2",
+                  collapsed
+                    ? "mx-auto size-10 justify-center"
+                    : "w-full gap-2.5 px-2 py-2",
                 )}
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">

@@ -32,6 +32,7 @@ export type Notification = {
   tone: "info" | "warning" | "success";
   createdAt: string;
   read: boolean;
+  href?: string;
 };
 
 export type Session = {

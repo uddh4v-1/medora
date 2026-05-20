@@ -35,6 +35,7 @@ import {
   type NewPrescriptionInput,
   NewPrescriptionDialog,
 } from "../../../prescriptions/_components/new-prescription-dialog";
+import { AiHistorySummary } from "./ai-history-summary";
 import { BillsList } from "./bills-list";
 import { MedicalRecordPanel } from "./medical-record-panel";
 import { PrescriptionsList } from "./prescriptions-list";
@@ -197,6 +198,12 @@ export function PatientDetailView({ patientId }: { patientId: string }) {
           />
         </div>
       </section>
+
+      <AiHistorySummary
+        patient={patient}
+        visits={visits}
+        prescriptions={rxList}
+      />
 
       <Tabs defaultValue="record" className="gap-4">
         <TabsList>

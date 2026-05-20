@@ -8,7 +8,9 @@ import {
   Inbox,
   Package,
   Receipt,
+  UserCircle,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,8 @@ import {
   lowInventory,
 } from "@/lib/dashboard-content";
 import { type Notification, useClinicStore } from "@/stores/clinic-store";
+import type { ClinicResponse } from "@/services/clinic.service";
+import type { TeamMember } from "@/lib/dashboard-content";
 import { cn } from "@/lib/utils";
 
 function timeStringToMinutes(t: string) {
@@ -50,13 +54,60 @@ function todayIso() {
     .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
 }
 
+type ProfileChecklistItem = {
+  label: string;
+  done: boolean;
+};
+
+function buildProfileChecklist(
+  clinicProfile: ClinicResponse | null,
+  teamMembers: TeamMember[],
+): ProfileChecklistItem[] {
+  return [
+    { label: "Add your city", done: !!clinicProfile?.city?.trim() },
+    { label: "Add clinic address", done: !!clinicProfile?.address?.trim() },
+    {
+      label: "Add specialties",
+      done: (clinicProfile?.specialties?.length ?? 0) > 0,
+    },
+    {
+      label: "Write a clinic description",
+      done: !!clinicProfile?.description?.trim(),
+    },
+    { label: "Invite a team member", done: teamMembers.length >= 2 },
+  ];
+}
+
 function buildNotifications(opts: {
   appointments: Appointment[];
   invoices: Invoice[];
   noShows: Appointment[];
+  clinicProfile: ClinicResponse | null;
+  teamMembers: TeamMember[];
 }): Notification[] {
   const out: Notification[] = [];
   const now = nowMinutes();
+
+  // Profile completion — first item so it sits at the top
+  const checklist = buildProfileChecklist(opts.clinicProfile, opts.teamMembers);
+  const completed = checklist.filter((i) => i.done).length;
+  if (completed < checklist.length) {
+    const pending = checklist.filter((i) => !i.done);
+    const first = pending[0]!.label;
+    const more = pending.length - 1;
+    out.push({
+      id: "profile-incomplete",
+      title: `Complete your profile · ${completed}/${checklist.length}`,
+      description:
+        more > 0
+          ? `${first} and ${more} more`
+          : first,
+      tone: "info",
+      createdAt: new Date().toISOString(),
+      read: false,
+      href: "/dashboard/settings?tab=profile",
+    });
+  }
 
   for (const apt of opts.appointments) {
     const start = timeStringToMinutes(apt.startTime);
@@ -144,6 +195,7 @@ const toneStyles: Record<
 };
 
 const sourceIcon = (id: string) => {
+  if (id === "profile-incomplete") return UserCircle;
   if (id.startsWith("apt-soon-")) return CalendarClock;
   if (id.startsWith("inv-overdue-")) return Receipt;
   if (id.startsWith("no-show-")) return AlertTriangle;
@@ -154,6 +206,8 @@ const sourceIcon = (id: string) => {
 export function NotificationsBell() {
   const appointments = useClinicStore((s) => s.appointments);
   const invoices = useClinicStore((s) => s.invoices);
+  const clinicProfile = useClinicStore((s) => s.clinicProfile);
+  const teamMembers = useClinicStore((s) => s.teamMembers);
   const readIds = useClinicStore((s) => s.notificationsRead);
   const markRead = useClinicStore((s) => s.markNotificationsRead);
 
@@ -164,17 +218,27 @@ export function NotificationsBell() {
 
   const notifications = useMemo(
     () =>
-      buildNotifications({ appointments, invoices, noShows }).map((n) => ({
+      buildNotifications({
+        appointments,
+        invoices,
+        noShows,
+        clinicProfile,
+        teamMembers,
+      }).map((n) => ({
         ...n,
-        read: readIds.includes(n.id),
+        // Sticky reminders can't be marked read — they only go away when the
+        // underlying state is fixed (e.g. profile is fully filled in).
+        read: n.id === "profile-incomplete" ? false : readIds.includes(n.id),
       })),
-    [appointments, invoices, noShows, readIds],
+    [appointments, invoices, noShows, clinicProfile, teamMembers, readIds],
   );
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   function handleMarkAll() {
-    const ids = notifications.filter((n) => !n.read).map((n) => n.id);
+    const ids = notifications
+      .filter((n) => !n.read && n.id !== "profile-incomplete")
+      .map((n) => n.id);
     if (ids.length) markRead(ids);
   }
 
@@ -239,14 +303,8 @@ export function NotificationsBell() {
               {notifications.map((n) => {
                 const Icon = sourceIcon(n.id);
                 const tone = toneStyles[n.tone];
-                return (
-                  <li
-                    key={n.id}
-                    className={cn(
-                      "flex items-start gap-3 px-4 py-3 text-sm",
-                      n.read ? "opacity-70" : "",
-                    )}
-                  >
+                const body = (
+                  <>
                     <span
                       className={cn(
                         "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ring-1",
@@ -270,6 +328,34 @@ export function NotificationsBell() {
                         className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-coral"
                       />
                     ) : null}
+                  </>
+                );
+
+                return (
+                  <li
+                    key={n.id}
+                    className={cn(
+                      "text-sm",
+                      n.read ? "opacity-70" : "",
+                    )}
+                  >
+                    {n.href ? (
+                      <Link
+                        href={n.href}
+                        onClick={() => {
+                          if (!n.read && n.id !== "profile-incomplete") {
+                            markRead([n.id]);
+                          }
+                        }}
+                        className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/60"
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="flex items-start gap-3 px-4 py-3">
+                        {body}
+                      </div>
+                    )}
                   </li>
                 );
               })}
