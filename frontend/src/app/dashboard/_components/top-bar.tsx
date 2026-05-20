@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Stethoscope } from "lucide-react";
+import { LogOut, Menu, PanelLeft, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ import {
 import { siteConfig } from "@/lib/site-content";
 import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
+import { useUiStore } from "@/stores/ui-store";
 
 import { useDashboardSession } from "../_hooks/use-dashboard-session";
 
@@ -36,6 +37,8 @@ export function DashboardTopBar() {
     roleLabel,
     session,
   } = useDashboardSession();
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
 
   useEffect(() => {
     setOpen(false);
@@ -43,6 +46,17 @@ export function DashboardTopBar() {
 
   return (
     <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-sm md:px-6">
+      <button
+        type="button"
+        onClick={toggleSidebar}
+        aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        className="hidden size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:flex"
+      >
+        <PanelLeft
+          className={cn("size-4", sidebarCollapsed && "rotate-180")}
+        />
+      </button>
       <div className="flex items-center gap-2.5 md:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
