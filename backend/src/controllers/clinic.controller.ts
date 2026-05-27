@@ -20,6 +20,7 @@ import {
   updateClinic,
 } from "@/services/clinic.service";
 import { prisma } from "@/lib/prisma";
+import {EXPORT_TYPES} from "@/constants/clinic"
 
 function requireClinicId(req: Request): string {
   const clinicId = req.auth?.clinicId;
@@ -52,7 +53,7 @@ export const patchClinic = async(req: Request, res: Response): Promise<void> => 
 
 // ── Data Export ───────────────────────────────────────────────────────────────
 
-const EXPORT_TYPES = ["patients", "appointments", "prescriptions", "invoices"] as const;
+
 type ExportType = (typeof EXPORT_TYPES)[number];
 
 export const exportClinicDataHandler = async(req: Request, res: Response): Promise<void> => {
