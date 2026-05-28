@@ -44,7 +44,7 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
   res.cookie(env.REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions(env, rememberMe));
 };
 
-export const postLogin = async (req: Request, res: Response): Promise<void> => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password, rememberMe } = validateSchema(loginBodySchema.safeParse(req.body));
   const env = getEnv();
   const result = await loginWithCredentials(email, password, rememberMe);

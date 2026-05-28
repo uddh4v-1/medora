@@ -4,35 +4,8 @@ import { normalizeIndianMobile } from "@/utils/phone";
 import { geocodeAddress } from "@/utils/geocode";
 import { getGroupClinics, resolveRootClinicId } from "@/lib/clinic-locations";
 import type { UpdateClinicBody } from "@/schemas/clinic.schemas";
-
-const CLINIC_SELECT = {
-  id: true, name: true, slug: true, phone: true,
-  address: true, city: true, state: true, pincode: true,
-  specialties: true, description: true, logoUrl: true, brandColor: true, createdAt: true,
-} as const;
-
-function formatClinic(c: {
-  id: string; name: string; slug: string; phone: string;
-  address: string | null; city: string | null; state: string | null;
-  pincode: string | null; specialties: string[]; description: string | null;
-  logoUrl: string | null; brandColor: string | null; createdAt: Date;
-}) {
-  return {
-    id: c.id, name: c.name, slug: c.slug, phone: c.phone,
-    address: c.address, city: c.city, state: c.state, pincode: c.pincode,
-    specialties: c.specialties, description: c.description,
-    logoUrl: c.logoUrl, brandColor: c.brandColor,
-    createdAt: c.createdAt.toISOString(),
-  };
-}
-
-const SUB_SELECT = {
-  plan: true,
-  billingStatus: true,
-  trialEndsAt: true,
-  currentPeriodStart: true,
-  currentPeriodEnd: true,
-} as const;
+import { CLINIC_SELECT, SUB_SELECT } from "@/constants/clinic";
+import {formatClinic} from "@/helper/clinic.helper";
 
 export async function getClinicSubscription(clinicId: string) {
   let sub = await prisma.clinicSubscription.findUnique({
