@@ -4,16 +4,19 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Download,
   Loader2,
   LogIn,
   Search,
+  Send,
+  ShieldCheck,
   Trash2,
   Users,
   CheckSquare,
   Square,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -27,10 +30,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  type ImpersonationRequest,
+  consumeImpersonationRequest,
   deleteClinic,
   downloadExport,
-  impersonateClinic,
   listClinics,
+  listMyImpersonationRequests,
+  requestImpersonation,
   setClinicStatus,
   bulkClinicAction,
 } from "@/services/superadmin.service";
@@ -68,9 +74,16 @@ export default function ClinicsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
   const [toggling, setToggling] = useState<string | null>(null);
+  const [requesting, setRequesting] = useState<string | null>(null);
   const [entering, setEntering] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Pending / approved impersonation requests, keyed by clinicId. Polled.
+  const [requests, setRequests] = useState<Record<string, ImpersonationRequest>>(
+    {},
+  );
+  const seenDecisions = useRef<Set<string>>(new Set());
 
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -160,9 +173,23 @@ export default function ClinicsPage() {
     setDeleting(null);
   }
 
+  async function handleRequest(clinic: ClinicListItem) {
+    setRequesting(clinic.id);
+    const res = await requestImpersonation(clinic.id);
+    setRequesting(null);
+    if (!res.ok) {
+      toast.error("Could not send request");
+      return;
+    }
+    setRequests((prev) => ({ ...prev, [clinic.id]: res.data }));
+    toast.success(`Request sent to ${clinic.name}`);
+  }
+
   async function handleEnter(clinic: ClinicListItem) {
+    const req = requests[clinic.id];
+    if (!req || req.status !== "approved") return;
     setEntering(clinic.id);
-    const res = await impersonateClinic(clinic.id);
+    const res = await consumeImpersonationRequest(req.id);
     if (res.ok) {
       toast.success(`Entering ${res.data.clinicName} as ${res.data.ownerName}`);
       router.push("/dashboard");
@@ -171,6 +198,67 @@ export default function ClinicsPage() {
       setEntering(null);
     }
   }
+
+  // Poll the SuperAdmin's own requests while any are pending/approved.
+  useEffect(() => {
+    const hasLiveRequest = Object.values(requests).some(
+      (r) => r.status === "pending" || r.status === "approved",
+    );
+    if (!hasLiveRequest && Object.keys(requests).length === 0) return;
+
+    const poll = async () => {
+      const res = await listMyImpersonationRequests();
+      if (!res.ok) return;
+      // Take the latest non-consumed request per clinicId.
+      const byClinic: Record<string, ImpersonationRequest> = {};
+      for (const r of res.data.items) {
+        if (r.consumedAt) continue;
+        const cur = byClinic[r.clinicId];
+        if (!cur || new Date(r.createdAt) > new Date(cur.createdAt)) {
+          byClinic[r.clinicId] = r;
+        }
+      }
+
+      // Toast on newly-decided requests we haven't surfaced yet.
+      for (const r of Object.values(byClinic)) {
+        const key = `${r.id}:${r.status}`;
+        if (seenDecisions.current.has(key)) continue;
+        if (r.status === "approved") {
+          toast.success(`${r.clinicName} approved your request`);
+          seenDecisions.current.add(key);
+        } else if (r.status === "denied") {
+          toast.error(`${r.clinicName} denied your request`);
+          seenDecisions.current.add(key);
+        } else if (r.status === "expired") {
+          toast.message(`Request to ${r.clinicName} expired`);
+          seenDecisions.current.add(key);
+        }
+      }
+
+      setRequests(byClinic);
+    };
+
+    void poll();
+    const id = window.setInterval(poll, 5000);
+    return () => window.clearInterval(id);
+  }, [requests]);
+
+  // Seed from server on mount so navigating away + back preserves pending state.
+  useEffect(() => {
+    void (async () => {
+      const res = await listMyImpersonationRequests();
+      if (!res.ok) return;
+      const byClinic: Record<string, ImpersonationRequest> = {};
+      for (const r of res.data.items) {
+        if (r.consumedAt) continue;
+        const cur = byClinic[r.clinicId];
+        if (!cur || new Date(r.createdAt) > new Date(cur.createdAt)) {
+          byClinic[r.clinicId] = r;
+        }
+      }
+      setRequests(byClinic);
+    })();
+  }, []);
 
   const allSelected = items.length > 0 && selected.size === items.length;
   const someSelected = selected.size > 0;
@@ -314,14 +402,14 @@ export default function ClinicsPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">{formatDate(clinic.createdAt)}</span>
                   <div className="ml-auto flex items-center gap-1">
-                    <Button
-                      variant="ghost" size="sm" disabled={entering === clinic.id || clinic.status === "suspended"}
-                      onClick={() => handleEnter(clinic)}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600"
-                      title={clinic.status === "suspended" ? "Cannot enter suspended clinic" : "Enter as Owner"}
-                    >
-                      {entering === clinic.id ? <Loader2 className="size-3 animate-spin" /> : <LogIn className="size-3" />}
-                    </Button>
+                    <ImpersonateButton
+                      clinic={clinic}
+                      request={requests[clinic.id]}
+                      requesting={requesting === clinic.id}
+                      entering={entering === clinic.id}
+                      onRequest={() => handleRequest(clinic)}
+                      onEnter={() => handleEnter(clinic)}
+                    />
                     <Button
                       variant="outline" size="sm" disabled={toggling === clinic.id}
                       onClick={() => handleToggleStatus(clinic)}
@@ -361,5 +449,81 @@ export default function ClinicsPage() {
 
       {/* Delete confirmation state is indicated by button color change */}
     </div>
+  );
+}
+
+function ImpersonateButton({
+  clinic,
+  request,
+  requesting,
+  entering,
+  onRequest,
+  onEnter,
+}: {
+  clinic: ClinicListItem;
+  request: ImpersonationRequest | undefined;
+  requesting: boolean;
+  entering: boolean;
+  onRequest: () => void;
+  onEnter: () => void;
+}) {
+  const isSuspended = clinic.status === "suspended";
+  const isPending = request?.status === "pending";
+  const isApproved = request?.status === "approved";
+
+  if (isApproved) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={entering}
+        onClick={onEnter}
+        className="h-7 gap-1 px-2 text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/20"
+        title="Approved — enter clinic"
+      >
+        {entering ? (
+          <Loader2 className="size-3 animate-spin" />
+        ) : (
+          <ShieldCheck className="size-3" />
+        )}
+        Enter
+      </Button>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled
+        className="h-7 gap-1 px-2 text-[11px] font-medium text-amber-600"
+        title="Waiting for clinic owner / doctor to approve"
+      >
+        <Clock className="size-3 animate-pulse" />
+        Pending
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={requesting || isSuspended}
+      onClick={onRequest}
+      className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600"
+      title={
+        isSuspended
+          ? "Cannot request access to a suspended clinic"
+          : "Request access from clinic owner / doctor"
+      }
+    >
+      {requesting ? (
+        <Loader2 className="size-3 animate-spin" />
+      ) : (
+        <Send className="size-3" />
+      )}
+    </Button>
   );
 }

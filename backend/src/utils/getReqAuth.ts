@@ -1,3 +1,5 @@
+import type { Request } from "express";
+
 import { HttpError } from "@/utils/http-error";
 
 export function requireClinicId(req: Request): string {

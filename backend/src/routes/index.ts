@@ -18,6 +18,7 @@ import { superadminRouter } from "./superadmin.routes";
 import { billingRouter } from "./billing.routes";
 import { discoverRouter } from "./discover.routes";
 import { notificationsRouter } from "./notifications.routes";
+import { impersonationRequestsRouter } from "./impersonation-requests.routes";
 import { getPlatformConfig, getPublicPlans } from "@/services/superadmin.service";
 
 export const apiRouter = Router();
@@ -64,4 +65,5 @@ apiRouter.use("/clinic", requireAuth, requireActiveSubscription, auditMiddleware
 apiRouter.use("/audit", requireAuth, requireActiveSubscription, auditRouter);
 apiRouter.use("/notifications", requireAuth, requireActiveSubscription, auditMiddleware, notificationsRouter);
 apiRouter.use("/billing", requireAuth, billingRouter);
+apiRouter.use("/impersonation-requests", impersonationRequestsRouter);
 apiRouter.use("/superadmin", requireAuth, superadminRouter);

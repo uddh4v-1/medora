@@ -108,3 +108,16 @@ export const listHealthScoresQuerySchema = z.object({
   risk: z.enum(["all", "low", "medium", "high"]).optional(),
 });
 export type ListHealthScoresQuery = z.infer<typeof listHealthScoresQuerySchema>;
+
+// ── Impersonation Requests ────────────────────────────────────────────────────
+
+export const requestImpersonationBodySchema = z.object({
+  reason: z.string().trim().max(500).optional(),
+});
+export type RequestImpersonationBody = z.infer<
+  typeof requestImpersonationBodySchema
+>;
+
+export const impersonationRequestIdParamSchema = z.object({
+  id: z.string().min(1),
+});

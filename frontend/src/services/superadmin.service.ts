@@ -104,6 +104,60 @@ export function exitImpersonation() {
   );
 }
 
+// ── Impersonation Requests (consent-based) ───────────────────────────────────
+
+export type ImpersonationRequestStatus =
+  | "pending"
+  | "approved"
+  | "denied"
+  | "expired";
+
+export type ImpersonationRequest = {
+  id: string;
+  clinicId: string;
+  clinicName: string;
+  status: ImpersonationRequestStatus;
+  reason: string | null;
+  expiresAt: string;
+  respondedAt: string | null;
+  consumedAt: string | null;
+  createdAt: string;
+  superAdmin: { id: string; name: string; email: string };
+  respondedBy: { id: string; name: string; email: string } | null;
+};
+
+export type ImpersonationRequestListResponse = {
+  items: ImpersonationRequest[];
+};
+
+/** SuperAdmin: open a new request for a clinic. */
+export function requestImpersonation(clinicId: string, reason?: string) {
+  return apiPost<ImpersonationRequest, { reason?: string }>(
+    `${BASE}/clinics/${clinicId}/impersonation-requests`,
+    reason ? { reason } : {},
+  );
+}
+
+/** SuperAdmin: list own requests (recent + pending). */
+export function listMyImpersonationRequests() {
+  return apiGet<ImpersonationRequestListResponse>(
+    `${BASE}/impersonation-requests`,
+  );
+}
+
+/** SuperAdmin: actually enter the clinic once approved. Sets the impersonation cookie. */
+export function consumeImpersonationRequest(requestId: string) {
+  return apiPost<
+    {
+      clinicId: string;
+      clinicName: string;
+      ownerName: string;
+      ownerEmail: string;
+    },
+    Record<string, never>
+  >(`${BASE}/impersonation-requests/${requestId}/consume`, {});
+}
+
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
 export function getAnalytics() {

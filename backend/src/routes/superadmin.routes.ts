@@ -2,6 +2,11 @@ import { Router } from "express";
 import { asyncHandler } from "@/utils/async-handler";
 import { requireSuperAdmin } from "@/middleware/require-superadmin.middleware";
 import {
+  createImpersonationRequestHandler,
+  listMyImpersonationRequestsHandler,
+  consumeImpersonationRequestHandler,
+} from "@/controllers/impersonation-requests.controller";
+import {
   listClinicsHandler,
   getClinicDetailHandler,
   setClinicStatusHandler,
@@ -66,6 +71,20 @@ superadminRouter.patch("/clinics/:id/status", asyncHandler(setClinicStatusHandle
 superadminRouter.delete("/clinics/:id", asyncHandler(deleteClinicHandler));
 superadminRouter.post("/clinics/:id/impersonate", asyncHandler(impersonateClinicHandler));
 superadminRouter.post("/clinics/bulk", asyncHandler(bulkClinicActionHandler));
+
+// Impersonation requests (consent-based flow)
+superadminRouter.post(
+  "/clinics/:id/impersonation-requests",
+  asyncHandler(createImpersonationRequestHandler),
+);
+superadminRouter.get(
+  "/impersonation-requests",
+  asyncHandler(listMyImpersonationRequestsHandler),
+);
+superadminRouter.post(
+  "/impersonation-requests/:id/consume",
+  asyncHandler(consumeImpersonationRequestHandler),
+);
 
 // Users
 superadminRouter.get("/users", asyncHandler(listUsersHandler));
